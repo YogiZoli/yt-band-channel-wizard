@@ -135,6 +135,16 @@
   .chip{font-size:12px;font-weight:800;border-radius:99px;padding:4px 10px;border:1px solid var(--line);color:var(--muted);background:var(--surface-2)}
   .chip.ok{background:var(--green-soft);border-color:var(--green);color:var(--green-deep)}
 
+  /* status line: what is happening right now, and whether to wait */
+  .status{border:2px solid var(--line);background:var(--surface-2);border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;line-height:1.4}
+  .status.busy{border-color:var(--green)}
+  .status.busy::before{content:"";display:inline-block;width:12px;height:12px;margin-right:8px;border:2px solid var(--green);border-top-color:transparent;border-radius:50%;vertical-align:-1px;animation:spin .8s linear infinite}
+  .status.ok{border-color:var(--green);background:var(--green-soft)}
+  .status.err{border-color:var(--red);color:var(--red)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: reduce){.status.busy::before{animation:none}}
+  .linkbtn{appearance:none;border:0;background:none;padding:0;font:inherit;font-weight:800;color:var(--green-deep);text-decoration:underline;cursor:pointer}
+
   .cta{font-size:15.5px;font-weight:700;line-height:1.4;margin:0}
   footer{color:var(--muted);font-size:12.5px;font-weight:600;line-height:1.55;text-align:center}
 
@@ -181,9 +191,12 @@
     <div class="progtop"><span id="progL"></span><span id="progR"></span></div>
     <div class="bar"><i id="progBar" style="width:0%"></i></div>
   </div>
+  <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+  <noscript><div class="card hl"><h3>This wizard needs JavaScript</h3><p class="hint">Switch JavaScript on in your browser settings and reload the page.</p></div></noscript>
   <main id="stage" class="wrap" style="gap:11px"></main>
   <footer>
-    Everything runs in your browser. Your images never leave your device.
+    Everything runs in your browser. Your images never leave your device.<br>
+    Something not working? <button type="button" class="linkbtn" id="diagBtn">Copy a diagnostic report</button> and send it to the person who gave you this link. It contains no answers and no email. <span id="ver"></span>
   </footer>
 </div>
 <div class="pdfhost" id="pdfhost" aria-hidden="true"></div>
@@ -277,13 +290,126 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   var S = { i:0, vidiq:false, app:"", connected:false, lead:null, research:"", checks:{},
             a:{ lang:"English", country:"United States", color:"#17C05B" } };
   var IMG = { logo:null, banner:null };   /* memory only: never stored, never sent */
+  var APP_VERSION = "1.1.0";
+  var STORE_KEY = "bcw_state";
+  var JOB = { pdf:false };   /* what is running right now */
+  var LAST = {};             /* the last file made of each kind, so it can be opened again */
 
-  function save(){ try{ localStorage.setItem("bcw_state", JSON.stringify(S)); }catch(e){} }
+  /* ---------- event log: what happened, in order, so a problem can be traced ---------- */
+  var LOG = [];
+  function log(ev, detail){
+    try{
+      LOG.push({ t:new Date().toISOString(), s:SCREENS[S.i] || "", ev:ev, d:detail == null ? "" : String(detail).slice(0, 300) });
+      if(LOG.length > 150) LOG.shift();
+      localStorage.setItem(STORE_KEY + "_log", JSON.stringify(LOG));
+    }catch(e){}
+  }
+  function report(){
+    var R = parseResearch(S.research), a = S.a || {}, filled = 0;
+    Object.keys(a).forEach(function(k){ if(clean(a[k])) filled++; });
+    var L = [
+      "Brand Channel Wizard diagnostic report",
+      "version: " + APP_VERSION,
+      "url: " + location.href,
+      "time: " + new Date().toISOString(),
+      "browser: " + navigator.userAgent,
+      "viewport: " + window.innerWidth + " x " + window.innerHeight,
+      "online: " + navigator.onLine,
+      "progress saved in this browser: " + storageOK + (researchUnsaved ? " (research too large to save)" : ""),
+      "screen: " + (SCREENS[S.i] || S.i),
+      "gates: vidiq=" + S.vidiq + " app=" + (S.app || "none") + " connected=" + S.connected,
+      "answers filled: " + filled,
+      "lead captured: " + !!S.lead + ", webhook set: " + !!WEBHOOK_URL + ", lead status: " + (S.leadState ? S.leadState.status + " after " + S.leadState.tries + " tries" : "none"),
+      "research: " + S.research.length + " characters, sections found: " + SECTIONS.filter(function(s){ return R[s[0]]; }).map(function(s){ return s[1]; }).join(", "),
+      "images: logo=" + !!IMG.logo + " banner=" + !!IMG.banner,
+      "pdf tools loaded: jspdf=" + !!(window.jspdf && window.jspdf.jsPDF) + " html2canvas=" + !!window.html2canvas,
+      "pdf job running: " + JOB.pdf,
+      "",
+      "Events, oldest first:"
+    ];
+    LOG.forEach(function(e){ L.push(e.t + " [" + e.s + "] " + e.ev + (e.d ? ": " + e.d : "")); });
+    return L.join("\n");
+  }
+
+  /* ---------- status line ---------- */
+  var statusT = null, lastErrNote = 0;
+  function notify(text, kind, keep){
+    var el = $("status"); if(!el) return;
+    clearTimeout(statusT);
+    if(!text){ el.hidden = true; el.textContent = ""; el.setAttribute("data-kind", ""); return; }
+    el.className = "status " + (kind || "info"); el.textContent = text; el.hidden = false; el.setAttribute("data-kind", kind || "info");
+    if(kind === "ok" && !keep) statusT = setTimeout(function(){ notify(""); }, 9000);
+  }
+  function softError(where, msg){
+    log(where, msg);
+    var now = Date.now(); if(now - lastErrNote < 5000 || JOB.pdf) return;
+    lastErrNote = now;
+    notify("Something did not work as expected. Your answers are safe. Try that step once more, or reload the page.", "err");
+  }
+
+  /* ---------- saving progress ---------- */
+  var storageOK = true, researchUnsaved = false, saveT = null;
+  function setStorage(ok){
+    if(ok === storageOK) return;
+    storageOK = ok;
+    log("storage", ok ? "working again" : "not available");
+    if(!ok) notify("This browser is not saving your progress (private mode, or its storage is full). You can keep going, but keep this tab open until you have downloaded your card.", "err");
+  }
+  function save(){
+    clearTimeout(saveT);
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); researchUnsaved = false; setStorage(true); }
+    catch(e){
+      /* most likely the pasted research is too big: keep everything else */
+      try{
+        localStorage.setItem(STORE_KEY, JSON.stringify(Object.assign({}, S, { research:"" })));
+        setStorage(true);
+        if(S.research && !researchUnsaved){
+          researchUnsaved = true; log("storage", "research too large to save, " + S.research.length + " characters");
+          notify("Your research is too long to keep in this browser's storage. It is on the page now, so download your card before you close this tab.", "info");
+        }
+      }catch(e2){ setStorage(false); }
+    }
+  }
+  function saveSoon(){ clearTimeout(saveT); saveT = setTimeout(save, 400); }
   function load(){
     try{
-      var raw = localStorage.getItem("bcw_state");
-      if(raw){ var p = JSON.parse(raw); if(p && typeof p === "object"){ var a = Object.assign({}, S.a, p.a || {}); Object.assign(S, p); S.a = a; } }
-    }catch(e){}
+      var raw = localStorage.getItem(STORE_KEY);
+      if(raw){ var p = JSON.parse(raw); if(p && typeof p === "object"){ var a = Object.assign({}, S.a, (p.a && typeof p.a === "object") ? p.a : {}); Object.assign(S, p); S.a = a; } }
+    }catch(e){ log("load-failed", e && e.message); }
+    try{ var l = JSON.parse(localStorage.getItem(STORE_KEY + "_log") || "[]"); if(Array.isArray(l)) LOG = l.slice(-120); }catch(e){}
+    try{ localStorage.setItem(STORE_KEY + "_probe", "1"); localStorage.removeItem(STORE_KEY + "_probe"); }catch(e){ storageOK = false; }
+    sane();
+  }
+  /* Saved state can be old, half written or edited by hand. Bring it back to a shape the screens can trust. */
+  function sane(){
+    if(typeof S.i !== "number" || !isFinite(S.i)) S.i = 0;
+    S.i = Math.max(0, Math.min(SCREENS.length - 1, Math.floor(S.i)));
+    S.vidiq = S.vidiq === true; S.connected = S.connected === true;
+    if(S.app !== "claude" && S.app !== "chatgpt") S.app = "";
+    if(!S.a || typeof S.a !== "object") S.a = {};
+    Object.keys(S.a).forEach(function(k){ if(typeof S.a[k] !== "string") S.a[k] = S.a[k] == null ? "" : String(S.a[k]); });
+    if(!clean(S.a.lang)) S.a.lang = "English";
+    if(!clean(S.a.country)) S.a.country = "United States";
+    if(!/^#[0-9a-f]{6}$/i.test(S.a.color || "")) S.a.color = "#17C05B";
+    if(S.a.face !== "person" && S.a.face !== "brand") S.a.face = "";
+    if(!S.checks || typeof S.checks !== "object") S.checks = {};
+    if(typeof S.research !== "string") S.research = "";
+    if(!S.lead || typeof S.lead !== "object" || typeof S.lead.name !== "string" || typeof S.lead.email !== "string" || !S.lead.name.trim()) S.lead = null;
+    if(!S.leadState || typeof S.leadState !== "object" || typeof S.leadState.tries !== "number") S.leadState = null;
+  }
+  function firstMissing(){
+    for(var k = 0; k < QUESTIONS.length; k++){
+      var q = QUESTIONS[k];
+      if((q.type === "text" || q.type === "area") && REQUIRED[q.key] && !clean(S.a[q.key])) return k;
+      if(q.type === "face" && (!S.a.face || !clean(S.a.name))) return k;
+      if(q.type === "look" && !S.a.style) return k;
+    }
+    return -1;
+  }
+  function awayNote(){
+    return storageOK
+      ? "The research takes a few minutes in " + appName() + ". You do not have to wait here: you can leave this page or close your laptop. Your answers are saved in this browser, so come back to this same link on this same device."
+      : "The research takes a few minutes in " + appName() + ". Keep this tab open while you wait: this browser is not saving your progress.";
   }
 
   /* ---------- small helpers ---------- */
@@ -653,16 +779,73 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   }
 
   /* ---------- PDF: each block is drawn with html2canvas and placed on A4 pages by jsPDF ---------- */
-  function buildPdf(onStep){
+  function withTimeout(p, ms, label){
+    return new Promise(function(res, rej){
+      var t = setTimeout(function(){ rej(new Error("timeout: " + label)); }, ms);
+      Promise.resolve(p).then(function(v){ clearTimeout(t); res(v); }, function(e){ clearTimeout(t); rej(e); });
+    });
+  }
+  /* The two PDF tools come from cdnjs. If one did not arrive, try again, then try a second CDN. */
+  var LIBS = {
+    jspdf:{ test:function(){ return !!(window.jspdf && window.jspdf.jsPDF); },
+      urls:["https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"] },
+    h2c:{ test:function(){ return !!window.html2canvas; },
+      urls:["https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"] }
+  };
+  function loadScript(url){
+    return withTimeout(new Promise(function(res, rej){
+      var s = document.createElement("script"); s.src = url; s.onload = res; s.onerror = function(){ rej(new Error("failed: " + url)); };
+      document.head.appendChild(s);
+    }), 15000, url);
+  }
+  function ensureLib(name){
+    var L = LIBS[name], i = 0;
+    function tryNext(){
+      if(L.test()) return true;
+      if(i >= L.urls.length){ log("lib-missing", name); return false; }
+      var u = L.urls[i++]; log("lib-load", u);
+      return loadScript(u).then(tryNext, function(e){ log("lib-load-failed", e && e.message); return tryNext(); });
+    }
+    return Promise.resolve().then(tryNext);
+  }
+
+  /* Last resort: a plain text PDF from the markdown card. No drawing involved, so it works where html2canvas does not. */
+  function latin(s){
+    s = String(s); if(s.normalize) s = s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+    return s.replace(/[^\x20-\x7E\xA0-\xFF]/g, "?");
+  }
+  function textPdf(){
+    var doc = new window.jspdf.jsPDF({ unit:"pt", format:"a4" });
+    var W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 48, y = M;
+    var lines = buildMarkdown().split("\n"), start = 0;
+    if(lines[0] === "---"){ start = lines.indexOf("---", 1) + 1; }
+    lines.slice(start).forEach(function(raw){
+      var m = raw.match(/^(#{1,3})\s+(.*)$/), size = 9.5, style = "normal", text = raw;
+      if(m){ size = m[1].length === 1 ? 18 : (m[1].length === 2 ? 14 : 11); style = "bold"; text = m[2]; y += 6; }
+      doc.setFont("helvetica", style); doc.setFontSize(size);
+      doc.splitTextToSize(latin(text) || " ", W - M*2).forEach(function(p){
+        if(y > H - M){ doc.addPage(); y = M; }
+        doc.text(p, M, y); y += size * 1.35;
+      });
+    });
+    return doc;
+  }
+
+  function buildPdf(onStep, scale){
     var doc = new window.jspdf.jsPDF({ unit:"pt", format:"a4" });
     var W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
     var M = 36, CW = W - M*2, TOP = 36, BOT = H - 46, y = TOP;
     var host = $("pdfhost"), blocks = cardBlocks(), i = 0;
     host.innerHTML = "";
 
-    function place(cv, b, nextKeep){
+    function place(cv, b){
+      if(!cv || cv.width < 2 || cv.height < 2) return;   /* an empty block draws nothing */
       var hPt = cv.height / cv.width * CW, fmt = b.img ? "JPEG" : "PNG";
-      var url = function(c){ return b.img ? c.toDataURL("image/jpeg", 0.9) : c.toDataURL("image/png"); };
+      var url = function(c){
+        var u = b.img ? c.toDataURL("image/jpeg", 0.9) : c.toDataURL("image/png");
+        if(!u || u.length < 64) throw new Error("canvas export failed");   /* some phones return an empty image when memory runs out */
+        return u;
+      };
       if(hPt <= BOT - TOP){
         /* a section heading never stays alone at the bottom of a page */
         if(y + hPt + (b.keep ? 60 : 0) > BOT){ doc.addPage(); y = TOP; }
@@ -698,8 +881,8 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
       var b = blocks[i++], el = document.createElement("div");
       el.className = "b"; el.innerHTML = b.h; host.appendChild(el);
       if(onStep) onStep(i, blocks.length);
-      return window.html2canvas(el, { scale:2, backgroundColor:"#ffffff", logging:false, useCORS:true }).then(function(cv){
-        host.removeChild(el);
+      return withTimeout(window.html2canvas(el, { scale:scale || 2, backgroundColor:"#ffffff", logging:false, useCORS:true }), 25000, "pdf part " + i).then(function(cv){
+        if(el.parentNode) host.removeChild(el);
         place(cv, b);
         return next();
       });
@@ -707,20 +890,87 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     return Promise.resolve().then(next);
   }
 
-  function download(name, blob){
-    var u = URL.createObjectURL(blob), aEl = document.createElement("a");
-    aEl.href = u; aEl.download = name; document.body.appendChild(aEl); aEl.click();
-    setTimeout(function(){ document.body.removeChild(aEl); URL.revokeObjectURL(u); }, 800);
+  /* One PDF job at a time. It tries the designed PDF, then a lighter one, then a plain text one, and always says where it is. */
+  function makePdf(){
+    if(JOB.pdf) return;
+    JOB.pdf = true;
+    var b = $("pdfBtn"); if(b) b.disabled = true;
+    var simple = false, t0 = Date.now();
+    log("pdf-start", "research " + S.research.length + " chars, logo " + !!IMG.logo + ", banner " + !!IMG.banner);
+    notify("Preparing your PDF. Keep this tab open, it usually takes less than a minute.", "busy");
+    function step(i, n){ notify("Building your PDF, part " + i + " of " + n + ". Keep this tab open.", "busy"); }
+    function clearHost(){ var h = $("pdfhost"); if(h) h.innerHTML = ""; }
+    ensureLib("jspdf").then(function(ok){
+      if(!ok) throw new Error("jspdf-missing");
+      return ensureLib("h2c");
+    }).then(function(ok){
+      if(!ok){ log("pdf-fallback", "html2canvas missing"); simple = true; return textPdf(); }
+      var fonts = (document.fonts && document.fonts.ready) ? withTimeout(document.fonts.ready, 3000, "fonts").catch(function(){}) : Promise.resolve();
+      return fonts.then(function(){ return buildPdf(step, 2); }).catch(function(e){
+        log("pdf-retry", e && e.message); clearHost();
+        notify("Still working: trying a lighter version of your PDF. Keep this tab open.", "busy");
+        return buildPdf(step, 1);
+      }).catch(function(e){
+        log("pdf-fallback", e && e.message); clearHost(); simple = true;
+        return textPdf();
+      });
+    }).then(function(doc){
+      var blob = doc.output("blob");
+      if(!blob || blob.size < 800) throw new Error("empty pdf");
+      deliver("pdf", FILE_BASE + ".pdf", blob);
+      log("pdf-done", doc.internal.getNumberOfPages() + " pages, " + Math.round((Date.now() - t0) / 1000) + " s" + (simple ? ", simple layout" : ""));
+      var tail = storageOK ? " You can close this page now, your answers stay saved in this browser." : "";
+      notify(simple
+        ? "Your PDF is ready in a simple layout, because this browser could not draw the designed one. The .md file has the same content." + tail
+        : "Your PDF is ready and was sent to your downloads." + tail, "ok", true);
+    }).catch(function(e){
+      clearHost();
+      log("pdf-failed", e && e.message);
+      notify(e && e.message === "jspdf-missing"
+        ? "The PDF tool could not load. Check your internet connection, then press Download the PDF again. The .md file works without it."
+        : "The PDF could not be created on this device. Nothing is lost: download the .md file instead, it has the same content.", "err");
+    }).then(function(){
+      JOB.pdf = false;
+      var b2 = $("pdfBtn"); if(b2) b2.disabled = false;
+    });
+  }
+
+  function filesHtml(){
+    var h = "";
+    [["pdf","PDF"],["md",".md file"]].forEach(function(k){
+      var f = LAST[k[0]];
+      if(f) h += "<p class='hint'>" + k[1] + " ready, " + esc(f.size) + ". Not in your downloads? <a href='" + f.url + "' target='_blank' rel='noopener'>Open " + esc(f.name) + " in a new tab</a></p>";
+    });
+    return h;
+  }
+  /* Start the download and keep the file reachable, because some browsers ignore a started download without saying so. */
+  function deliver(kind, name, blob){
+    try{ if(LAST[kind]) URL.revokeObjectURL(LAST[kind].url); }catch(e){}
+    var url = URL.createObjectURL(blob);
+    LAST[kind] = { url:url, name:name, size:blob.size > 1048576 ? (blob.size / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(blob.size / 1024)) + " KB" };
+    try{
+      var aEl = document.createElement("a");
+      aEl.href = url; aEl.download = name; aEl.rel = "noopener"; document.body.appendChild(aEl); aEl.click();
+      setTimeout(function(){ if(aEl.parentNode) aEl.parentNode.removeChild(aEl); }, 1000);
+      log("download", name + ", " + LAST[kind].size);
+    }catch(e){ log("download-failed", name + ": " + (e && e.message)); }
+    var f = $("files"); if(f) f.innerHTML = filesHtml();
   }
 
   /* ---------- lead capture ---------- */
+  /* Never blocks the visitor and never shows an error. The outcome is kept in S.leadState and retried on the next visit. */
   function sendLead(payload){
-    if(!WEBHOOK_URL) return;
+    if(!WEBHOOK_URL){ log("lead", "no webhook set, skipped"); return; }
+    S.leadState = { status:"pending", tries:(S.leadState ? S.leadState.tries : 0) + 1 }; save();
+    function mark(status, note){ if(S.leadState) S.leadState.status = status; save(); log("lead", status + (note ? ", " + note : "")); }
     try{
       fetch(WEBHOOK_URL, {
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify(payload), keepalive:true
-      }).catch(function(){
+      }).then(function(r){
+        if(!r.ok) throw new Error("status " + r.status);
+        mark("sent");
+      }).catch(function(e){
         /* If the browser blocks the JSON request (CORS), resend as a plain form post. */
         var flat = new URLSearchParams();
         flat.append("name", payload.name);
@@ -728,25 +978,65 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
         flat.append("source", payload.source);
         flat.append("ai_app", payload.ai_app);
         Object.keys(payload.answers).forEach(function(k){ flat.append(k, String(payload.answers[k])); });
-        return fetch(WEBHOOK_URL, { method:"POST", mode:"no-cors", body:flat, keepalive:true });
-      }).catch(function(){});
-    }catch(e){}
+        return fetch(WEBHOOK_URL, { method:"POST", mode:"no-cors", body:flat, keepalive:true }).then(function(){
+          mark("sent-unconfirmed", "form post after " + (e && e.message));
+        });
+      }).catch(function(e){ mark("failed", e && e.message); });
+    }catch(e){ mark("failed", e && e.message); }
+  }
+  function leadPayload(){ return { name:S.lead.name, email:S.lead.email, source:SOURCE, ai_app:S.app, answers:Object.assign({}, S.a) }; }
+  function retryLead(){
+    if(!WEBHOOK_URL || !S.lead || !S.leadState) return;
+    if((S.leadState.status === "pending" || S.leadState.status === "failed") && S.leadState.tries < 5) sendLead(leadPayload());
   }
 
   function copyText(text, btn){
-    function done(){ var t = btn.textContent; btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = t; }, 1400); }
-    function fallback(){
-      var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
-      document.body.appendChild(ta); ta.select();
-      try{ document.execCommand("copy"); done(); }catch(e){}
-      document.body.removeChild(ta);
+    var label = btn.getAttribute("data-label") || btn.textContent;
+    btn.setAttribute("data-label", label);
+    function flash(t){ btn.textContent = t; setTimeout(function(){ btn.textContent = label; }, 1600); }
+    function done(){ flash("Copied"); }
+    function manual(why){
+      /* Copying is blocked here: select the text so the visitor can copy it by hand. */
+      log("copy-failed", why);
+      flash("Copy by hand");
+      var card = btn.closest ? btn.closest(".card") : null, pre = card ? card.querySelector("pre.out") : null;
+      try{ if(pre){ var r = document.createRange(); r.selectNodeContents(pre); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } }catch(e){}
+      notify(pre ? "This browser blocked the copy. The text is selected for you: press Ctrl+C (Cmd+C on a Mac), or press and hold, then choose Copy."
+                 : "This browser blocked the copy. Reload the page and try again, or use another browser.", "err");
     }
-    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+    function fallback(e){
+      var ok = false, ta = document.createElement("textarea");
+      try{
+        ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+        ok = document.execCommand("copy");
+      }catch(e2){ ok = false; }
+      if(ta.parentNode) ta.parentNode.removeChild(ta);
+      if(ok) done(); else manual((e && e.message) || "execCommand refused");
+    }
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+    }catch(e){ fallback(e); }
   }
 
   /* ---------- screens ---------- */
   var stage = $("stage");
-  function go(i){ S.i = Math.max(0, Math.min(SCREENS.length - 1, i)); save(); render(); window.scrollTo(0, 0); }
+  function go(i, fromHistory){
+    S.i = Math.max(0, Math.min(SCREENS.length - 1, i)); save();
+    var st = $("status"); if(st && st.getAttribute("data-kind") !== "busy") notify("");
+    render();
+    /* the phone's Back button moves one screen back instead of leaving the wizard */
+    if(!fromHistory){ try{ history.pushState({ i:S.i }, ""); }catch(e){} }
+    window.scrollTo(0, 0);
+  }
+  function crash(){
+    stage.innerHTML = "<div class='card hl'><h3>This screen did not load</h3><p class='hint'>" + (storageOK ? "Your answers are still saved in this browser. " : "") + "Reload the page first. If it happens again, copy the diagnostic report and send it to the person who gave you this link.</p>" +
+      "<div class='nav'><button type='button' class='btn' id='crReload'>Reload the page</button><button type='button' class='btn ghost' id='crReport'>Copy the diagnostic report</button></div>" +
+      "<div class='nav'><button type='button' class='btn small ghost' id='crFirst'>Go back to the first question</button></div></div>";
+    $("crReload").addEventListener("click", function(){ location.reload(); });
+    $("crReport").addEventListener("click", function(){ copyText(report(), this); });
+    $("crFirst").addEventListener("click", function(){ go(Q_FIRST); });
+  }
   function band(tag, n, h, why){
     return "<section class='band'><span class='steptag'><span class='n'>" + n + "</span> " + esc(tag) + "</span><h2 id='qh' tabindex='-1'>" + esc(h) + "</h2>" + (why ? "<p class='why'>" + esc(why) + "</p>" : "") + "</section>";
   }
@@ -778,11 +1068,20 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   }
 
   function render(){
+    try{ draw(); }
+    catch(e){ log("render-failed", (SCREENS[S.i] || S.i) + ": " + (e && e.message)); try{ crash(); }catch(e2){} }
+  }
+  function draw(){
     /* guards: no skipping a gate */
     if(S.i > 0 && !S.vidiq) S.i = 0;
     else if(S.i > 1 && !S.app) S.i = 1;
     else if(S.i > 2 && !S.connected) S.i = 2;
     else if(S.i > EMAIL_I && !S.lead) S.i = EMAIL_I;
+    /* the kit needs every required answer: if one is missing, go to it instead of showing a broken kit */
+    if(S.i >= EMAIL_I){
+      var miss = firstMissing();
+      if(miss >= 0){ S.i = Q_FIRST + miss; log("guard", "missing answer: " + QUESTIONS[miss].id); notify("One answer is missing. Fill it in and your kit will be ready.", "info"); }
+    }
     var id = SCREENS[S.i];
     progress();
     if(id === "g1") return gate1();
@@ -858,7 +1157,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
 
     function collect(){
       Array.prototype.forEach.call(stage.querySelectorAll("input,textarea"), function(el){ a[el.id.replace("f_", "")] = el.value; });
-      save();
+      saveSoon();
     }
     function valid(){
       var err = "";
@@ -901,7 +1200,8 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
       if(problem){ err.textContent = problem; err.hidden = false; (name ? $("leadEmail") : $("leadName")).focus(); return; }
       var fresh = !S.lead || S.lead.email !== email;
       S.lead = { name:name, email:email };
-      if(fresh) sendLead({ name:name, email:email, source:SOURCE, ai_app:S.app, answers:Object.assign({}, S.a) });
+      log("lead-form", fresh ? "submitted" : "same email again");
+      if(fresh){ S.leadState = null; sendLead(leadPayload()); }
       go(KIT_I);
     });
     bindNav();
@@ -929,7 +1229,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   function kit(){
     COPY = {};
     var cl = checklist(), h = tabs();
-    h += "<div class='card hl'><h3>Here is your kit, " + esc(S.lead.name) + "</h3><p class='hint'>Four parts. Copy what you need. The one that matters most is part B: run it in " + appName() + ", then come back and paste the result.</p></div>";
+    h += "<div class='card hl'><h3>Here is your kit, " + esc(S.lead.name) + "</h3><p class='hint'>Four parts. Copy what you need. The one that matters most is part B: run it in " + appName() + ", then come back and paste the result.</p><p class='hint'>" + esc(awayNote()) + "</p></div>";
     h += "<p class='sechead'>A. Ready text</p>";
     h += block("names", "Channel name options", nameOptions().join("\n"), false, "Pick one. Short and easy to say beats clever.");
     h += block("handles", "Handle options", handleOptions().join("\n"), false, "YouTube tells you if a handle is taken when you type it in.");
@@ -963,13 +1263,39 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     return SECTIONS.map(function(s){ return "<span class='chip" + (R[s[0]] ? " ok" : "") + "'>" + s[1] + (R[s[0]] ? ": found" : ": missing") + "</span>"; }).join("");
   }
   function readImage(file, kind, cb){
-    if(!file || !/^image\//.test(file.type)) return;
+    if(!file) return;
+    if(!/^image\//.test(file.type)){ log("image-rejected", kind + ", type " + (file.type || "unknown")); notify("That file is not an image. Choose a PNG or JPG.", "err"); return; }
+    if(file.size > 30 * 1048576){ log("image-rejected", kind + ", " + Math.round(file.size / 1048576) + " MB"); notify("That image is over 30 MB. Export a smaller PNG or JPG and try again.", "err"); return; }
+    notify("Reading your image.", "busy");
     var fr = new FileReader();
-    fr.onload = function(){ var im = new Image(); im.onload = function(){ IMG[kind] = fr.result; IMG[kind + "Size"] = im.naturalWidth + " x " + im.naturalHeight; cb(); }; im.src = fr.result; };
-    fr.readAsDataURL(file);
+    fr.onerror = function(){ log("image-failed", kind + ", could not read the file"); notify("The image could not be read. Try again, or export it as PNG or JPG.", "err"); };
+    fr.onload = function(){
+      var im = new Image();
+      im.onerror = function(){ log("image-failed", kind + ", cannot decode " + file.type); notify("This browser cannot open that image format. Export it as PNG or JPG and try again.", "err"); };
+      im.onload = function(){
+        var w = im.naturalWidth, h = im.naturalHeight, max = kind === "banner" ? 2560 : 1200, src = fr.result;
+        /* a huge photo can exhaust a phone's memory later, in the PDF step: keep a sensible copy */
+        try{
+          if(Math.max(w, h) > max){
+            var k = max / Math.max(w, h), c = document.createElement("canvas");
+            c.width = Math.round(w * k); c.height = Math.round(h * k);
+            c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+            var u = c.toDataURL(kind === "banner" ? "image/jpeg" : "image/png", 0.92);
+            if(u && u.length > 100) src = u;
+          }
+        }catch(e){ log("image-downscale-failed", e && e.message); }
+        IMG[kind] = src; IMG[kind + "Size"] = w + " x " + h;
+        log("image-ok", kind + ", " + w + " x " + h);
+        notify("Image added. It stays on this device and is not kept after a reload.", "ok");
+        cb();
+      };
+      im.src = fr.result;
+    };
+    try{ fr.readAsDataURL(file); }catch(e){ fr.onerror(); }
   }
   function previews(){
     var l = $("logoPrev"), b = $("bannerPrev");
+    if(!l || !b) return;   /* the visitor moved to another screen while the image was loading */
     l.innerHTML = IMG.logo ? "<div class='logos'>" + [[120,"Channel page"],[48,"Under videos"],[24,"Comments"]].map(function(s){
       return "<figure><img src='" + IMG.logo + "' width='" + s[0] + "' height='" + s[0] + "' alt='Logo preview'>" + s[1] + "</figure>"; }).join("") + "</div>" +
       "<p class='hint'>Your file is " + IMG.logoSize + (IMG.logoSize === "800 x 800" ? ". Right size." : ". YouTube wants 800 x 800, square.") + " Can you still read it in the smallest circle?</p>" : "";
@@ -980,7 +1306,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   }
   function paste(){
     stage.innerHTML = tabs() +
-      "<div class='card'><h3>Paste your research from " + appName() + "</h3><p class='hint'>Copy the whole answer from " + appName() + " and paste it here, tables and all. It stays in this browser.</p>" +
+      "<div class='card'><h3>Paste your research from " + appName() + "</h3><p class='hint'>Copy the whole answer from " + appName() + " and paste it here, tables and all. It stays in this browser" + (storageOK ? ", saved as you type, so you can close this tab and finish later on this device" : "") + ".</p>" +
       "<textarea class='tall' id='research' placeholder='## Seeds&#10;| # | Seed | Why this seed |&#10;...'>" + esc(S.research) + "</textarea>" +
       "<div class='found' id='found'>" + foundHtml() + "</div>" +
       "<p class='hint'>A section shows as missing when its heading is not in the text. You can still download the card and add it later.</p></div>" +
@@ -989,19 +1315,24 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
       "<div class='drop'><label class='flabel' for='bannerFile'>Banner</label><input type='file' id='bannerFile' accept='image/*'><div id='bannerPrev'></div></div></div>" +
       "<div class='nav'><button type='button' class='btn ghost' id='back'>Back to the kit</button><button type='button' class='btn' id='next'>Next: build my card</button></div>";
     bindTabs(); previews();
-    $("research").addEventListener("input", function(){ S.research = this.value; save(); $("found").innerHTML = foundHtml(); });
+    $("research").addEventListener("input", function(){ S.research = this.value; saveSoon(); $("found").innerHTML = foundHtml(); });
     $("logoFile").addEventListener("change", function(){ readImage(this.files[0], "logo", previews); });
     $("bannerFile").addEventListener("change", function(){ readImage(this.files[0], "banner", previews); });
     bindNav();
   }
 
   function card(){
-    var has = !!S.research.trim();
+    var has = !!S.research.trim(), R0 = parseResearch(S.research);
+    var nFound = SECTIONS.filter(function(s){ return R0[s[0]]; }).length;
+    var inApp = /FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|MicroMessenger|TikTok/i.test(navigator.userAgent);
     stage.innerHTML = tabs() +
       "<div class='card hl'><h3 id='qh' tabindex='-1'>Your " + CARD_TITLE + "</h3>" +
       "<p class='hint'>" + (has ? "Your texts, your research and your checklist in one place." : "You have not pasted any research yet, so those sections will be empty. You can still download the card now and come back later.") + "</p>" +
-      "<div class='nav'><button type='button' class='btn' id='pdfBtn'>Download the PDF</button><button type='button' class='btn ghost' id='mdBtn'>Download the .md file</button></div>" +
-      "<p class='hint' id='dlMsg' role='status'>The .md file has fixed headings, so other tools can read it later.</p></div>" +
+      "<div class='nav'><button type='button' class='btn' id='pdfBtn'" + (JOB.pdf ? " disabled" : "") + ">Download the PDF</button><button type='button' class='btn ghost' id='mdBtn'>Download the .md file</button></div>" +
+      "<p class='hint'>In this card: research " + nFound + " of " + SECTIONS.length + " sections, logo " + (IMG.logo ? "yes" : "no") + ", banner " + (IMG.banner ? "yes" : "no") + "." + (!IMG.logo && !IMG.banner ? " Images are not kept after a reload, so add them on Paste back right before you download." : "") + "</p>" +
+      (inApp ? "<p class='hint'>You seem to be inside another app's built-in browser, where downloads often do nothing. If nothing arrives, open this page in Safari or Chrome.</p>" : "") +
+      "<div id='files'>" + filesHtml() + "</div>" +
+      "<p class='hint'>The .md file has fixed headings, so other tools can read it later. <button type='button' class='linkbtn' id='mdCopy'>Copy the .md text instead</button></p></div>" +
       "<div class='card'><p class='cta'>" + esc(CTA_LINE) + " <a id='programLink' href='" + esc(PROGRAM_URL) + "' target='_blank' rel='noopener'>See the program</a></p></div>" +
       "<div class='card'><h3>Preview</h3><div class='md' id='preview'></div></div>" +
       "<div class='nav'><button type='button' class='btn ghost' id='back'>Back</button><button type='button' class='btn ghost' id='restart'>Start over</button></div>";
@@ -1010,29 +1341,59 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     SECTIONS.forEach(function(s){ prev += "<h4>" + s[1] + "</h4>" + (R[s[0]] ? mdBlocks(R[s[0]]).join("") : "<p class='hint'>Not pasted yet.</p>"); });
     $("preview").innerHTML = prev;
     $("mdBtn").addEventListener("click", function(){
-      download(FILE_BASE + ".md", new Blob([buildMarkdown()], { type:"text/markdown;charset=utf-8" }));
-      $("dlMsg").textContent = "Check your downloads for the .md file.";
+      try{
+        deliver("md", FILE_BASE + ".md", new Blob([buildMarkdown()], { type:"text/markdown;charset=utf-8" }));
+        if(!JOB.pdf) notify("Your .md file is ready and was sent to your downloads.", "ok");
+      }catch(e){
+        log("md-failed", e && e.message);
+        notify("The .md file could not be created. Use Copy the .md text instead, then paste it into a note.", "err");
+      }
     });
-    $("pdfBtn").addEventListener("click", function(){
-      var btn = this, msg = $("dlMsg");
-      if(!window.jspdf || !window.jspdf.jsPDF || !window.html2canvas){ msg.textContent = "The PDF tool did not load. Check your connection, reload the page and try again."; return; }
-      btn.disabled = true; msg.textContent = "Building your PDF.";
-      buildPdf(function(i, n){ msg.textContent = "Building your PDF, part " + i + " of " + n + "."; }).then(function(doc){
-        doc.save(FILE_BASE + ".pdf");
-        msg.textContent = "Check your downloads for the PDF.";
-      }).catch(function(){
-        msg.textContent = "The PDF could not be created. Reload the page and try again. The .md file still works.";
-      }).then(function(){ btn.disabled = false; });
+    $("mdCopy").addEventListener("click", function(){
+      try{ copyText(buildMarkdown(), this); log("md-copied", ""); }
+      catch(e){ softError("md-copy-failed", e && e.message); }
     });
+    $("pdfBtn").addEventListener("click", makePdf);
+    /* two presses instead of a browser dialog, which some in-app browsers never show */
+    var armed = null;
     $("restart").addEventListener("click", function(){
-      if(!window.confirm("Clear all your answers and start again?")) return;
-      try{ localStorage.removeItem("bcw_state"); }catch(e){}
+      var btn = this;
+      if(!armed){
+        btn.textContent = "Press again to clear all answers";
+        armed = setTimeout(function(){ armed = null; btn.textContent = "Start over"; }, 5000);
+        return;
+      }
+      clearTimeout(armed);
+      try{ localStorage.removeItem(STORE_KEY); localStorage.removeItem(STORE_KEY + "_log"); }catch(e){}
       location.reload();
     });
   }
 
+  /* ---------- safety net: nothing fails silently, and nothing shows a raw error ---------- */
+  window.addEventListener("error", function(e){
+    if(e && e.target && e.target !== window && e.target.tagName){ log("resource-failed", (e.target.src || e.target.href || e.target.tagName)); return; }
+    softError("error", (e && e.message || "unknown") + " at line " + (e && e.lineno));
+  }, true);
+  window.addEventListener("unhandledrejection", function(e){
+    softError("promise-error", e && e.reason && (e.reason.message || String(e.reason)));
+  });
+  window.addEventListener("online", function(){ log("network", "online"); });
+  window.addEventListener("offline", function(){ log("network", "offline"); });
+  window.addEventListener("pagehide", function(){ save(); });
+  document.addEventListener("visibilitychange", function(){ if(document.hidden) save(); });
+  window.addEventListener("beforeunload", function(e){ if(JOB.pdf){ e.preventDefault(); e.returnValue = ""; } });
+  window.addEventListener("popstate", function(e){
+    if(e.state && typeof e.state.i === "number") go(e.state.i, true);
+  });
+  $("diagBtn").addEventListener("click", function(){ copyText(report(), this); });
+  $("ver").textContent = "v" + APP_VERSION;
+
   load();
+  log("open", "v" + APP_VERSION + ", screen " + SCREENS[S.i] + (storageOK ? "" : ", storage not available"));
   render();
+  try{ history.replaceState({ i:S.i }, ""); }catch(e){}   /* after render, so the guards have already picked the real screen */
+  if(!storageOK) notify("This browser is not saving your progress (private mode, or its storage is blocked). You can keep going, but keep this tab open until you have downloaded your card.", "err");
+  retryLead();
 })();
 </script>
 </body>

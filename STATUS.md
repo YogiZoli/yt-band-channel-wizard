@@ -6,7 +6,7 @@ Last updated: 2026-10-10
 A standalone lead magnet for course creators that turns the 5 phase VoxFlow channel setup into a self-serve wizard and feeds the 6-pillar cohort program.
 
 ## Now
-v1 is live on GitHub Pages. One file, `index.html`.
+v1.1.0 is live on GitHub Pages. One file, `index.html`. It includes the reliability pass (status line, event log, PDF and download fallbacks). A brand design duplicate lives in `YogiZoli/yt-band-channel-wizard-brand-design`; keep the script blocks of the two in sync.
 
 ## Next
 - Set `WEBHOOK_URL` (GHL inbound webhook) and `PROGRAM_URL` (still the placeholder).

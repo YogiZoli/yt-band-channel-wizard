@@ -36,3 +36,22 @@ Fixed H2 headings, in this order: Channel, Pillars, Playlists, Keywords, Competi
 
 - The vidIQ connect steps for Claude and ChatGPT (`gate3` in `index.html`).
 - The YouTube Studio click paths (`checklist` in `index.html`). Last checked: October 2026.
+
+## Reliability (v1.1.0)
+
+The rule: nothing fails silently, no raw error reaches the visitor, and the page always says what is happening.
+
+- **Status line** under the progress bar: what is running, whether to wait, and when the page can be closed.
+- **Saved progress**: answers are saved in the browser as the visitor types. If the browser refuses to save (private mode, full storage), the page says so and asks to keep the tab open. Research that is too large to save is kept on the page and the visitor is told.
+- **Saved state is checked on load**: an old, half written or broken state is repaired. If a required answer is missing, the visitor is taken to that question instead of a broken kit.
+- **PDF**: tries the designed PDF, then a lighter one, then a plain text PDF. The two PDF tools load from cdnjs, with jsDelivr as the second try. A part that hangs is cut off after 25 seconds.
+- **Downloads**: after each file the page shows an "open in a new tab" link, because some browsers ignore a started download. The .md text can also be copied.
+- **Copy buttons**: if the browser blocks copying, the text is selected and the visitor is told how to copy it by hand.
+- **Images**: wrong type, over 30 MB or an unreadable format gives a clear message. Large images are scaled down in memory so the PDF step does not run out of memory.
+- **Lead webhook**: never blocks the visitor. The result is recorded and a failed send is retried on the next visit, up to 5 times.
+- **Back button**: the browser's Back moves one screen back inside the wizard.
+- **If a screen fails to draw**: a recovery card with Reload, Copy the diagnostic report and Go back to the first question.
+
+### Finding out what happened
+
+The footer has "Copy a diagnostic report". It copies the version, browser, current screen, whether progress is being saved, the lead send status, which PDF tools loaded, and the last 150 events in order (for example `pdf-start`, `pdf-retry`, `pdf-fallback`, `download`, `copy-failed`, `image-failed`, `lead`, `error`). It contains no answers, no name and no email. The same log is in the browser under the `localStorage` key `bcw_state_log`.
