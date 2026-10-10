@@ -52,6 +52,41 @@ The rule: nothing fails silently, no raw error reaches the visitor, and the page
 - **Back button**: the browser's Back moves one screen back inside the wizard.
 - **If a screen fails to draw**: a recovery card with Reload, Copy the diagnostic report and Go back to the first question.
 
-### Finding out what happened
+### Finding out what happened (v1.2.0)
 
-The footer has "Copy a diagnostic report". It copies the version, browser, current screen, whether progress is being saved, the lead send status, which PDF tools loaded, and the last 150 events in order (for example `pdf-start`, `pdf-retry`, `pdf-fallback`, `download`, `copy-failed`, `image-failed`, `lead`, `error`). It contains no answers, no name and no email. The same log is in the browser under the `localStorage` key `bcw_state_log`.
+The app keeps a detailed event log. There is no server and no monitoring: the log lives in the visitor's browser, survives reloads and a restart, and holds the last 600 entries across visits.
+
+Every entry has: a running number, a visit id, the time, milliseconds since the page opened, a level (INFO, WARN, ERROR), the screen, the event and a detail. Example:
+
+    #55 2026-10-10T16:55:08.519Z +3631ms WARN [card] pdf-retry: drawing part 4 of 29 (content): TypeError: forced canvas failure | stack: ...
+
+What is logged:
+
+| Event | What it records |
+|---|---|
+| `open`, `env` | version, starting screen, size of the saved state, browser, viewport, memory, network type, timezone, in-app browser |
+| `screen`, `choice` | every move between screens (also browser back and forward) and every option picked |
+| `answer`, `validation` | each accepted answer and each refused one, with the lengths of the fields, never their content |
+| `lead-form`, `lead` | the email form, and each webhook attempt with result, try number and duration |
+| `kit-shown`, `copy`, `copy-failed`, `checklist`, `link` | what was shown, which block was copied and how, ticked items, outside links opened |
+| `research` | length of the pasted text, which sections were found and which are missing |
+| `image-read`, `image-ok`, `image-rejected`, `image-failed` | file type, size, dimensions, scaling, duration, and the reason when refused |
+| `lib-load`, `lib-loaded`, `lib-load-failed`, `lib-missing` | each attempt to load a PDF tool, with URL and duration |
+| `pdf-start`, `pdf-layout`, `pdf-part-slow`, `pdf-retry`, `pdf-fallback`, `pdf-done`, `pdf-failed` | every stage of the PDF, the exact part that failed and why, pages and seconds |
+| `download`, `md-copied`, `md-failed` | each file made, with name and size |
+| `storage`, `save-failed`, `load-failed`, `guard` | saving problems with the browser's own error, broken saved state, forced redirects |
+| `shown-to-visitor` | every status message the visitor saw, word for word |
+| `page`, `network` | tab hidden or visible, page left (also during a PDF build), online and offline |
+| `error`, `promise-error`, `resource-failed`, `render-failed` | every unexpected error with file, line, column and stack |
+
+The log never contains an answer, a name, an email or the pasted research.
+
+How to read it:
+
+- **Footer, "Copy a diagnostic report"**: state summary plus the whole log, on the clipboard.
+- **Footer, "Download the full log"**: the same as a .txt file.
+- **Add `?debug=1` to the URL**: a live log panel at the bottom of the page.
+- **Browser console**: every entry is printed with the prefix `[BCW]`. `BCW.report()` returns the report, `BCW.log()` the raw entries.
+- **Storage**: `localStorage` key `bcw_state_log`.
+
+Optional: set `LOG_URL` (next to `WEBHOOK_URL`) and every ERROR also posts the report to that address, at most 5 times per visit. It is empty by default, so nothing leaves the browser.

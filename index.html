@@ -196,8 +196,9 @@
   <main id="stage" class="wrap" style="gap:11px"></main>
   <footer>
     Everything runs in your browser. Your images never leave your device.<br>
-    Something not working? <button type="button" class="linkbtn" id="diagBtn">Copy a diagnostic report</button> and send it to the person who gave you this link. It contains no answers and no email. <span id="ver"></span>
+    Something not working? <button type="button" class="linkbtn" id="diagBtn">Copy a diagnostic report</button> and send it to the person who gave you this link. It contains no answers and no email. <button type="button" class="linkbtn" id="logBtn">Download the full log</button> <span id="ver"></span>
   </footer>
+  <div class="card" id="logview" hidden><h3>Live log</h3><pre class="out mono" id="logpre"></pre></div>
 </div>
 <div class="pdfhost" id="pdfhost" aria-hidden="true"></div>
 
@@ -207,6 +208,7 @@
 /* ===== SETTINGS: the two things to edit ===== */
 var WEBHOOK_URL = "";   // GHL inbound webhook. Empty = no POST, the kit is still delivered.
 var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6-pillar cohort program page
+var LOG_URL = "";       // optional: every error also posts the diagnostic report here. Empty = the log stays in the visitor's browser.
 /* ============================================ */
 
 (function(){
@@ -290,19 +292,70 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   var S = { i:0, vidiq:false, app:"", connected:false, lead:null, research:"", checks:{},
             a:{ lang:"English", country:"United States", color:"#17C05B" } };
   var IMG = { logo:null, banner:null };   /* memory only: never stored, never sent */
-  var APP_VERSION = "1.1.0";
+  var APP_VERSION = "1.2.0";
   var STORE_KEY = "bcw_state";
   var JOB = { pdf:false };   /* what is running right now */
   var LAST = {};             /* the last file made of each kind, so it can be opened again */
 
   /* ---------- event log: what happened, in order, so a problem can be traced ---------- */
-  var LOG = [];
-  function log(ev, detail){
+  /* Every entry: running number, session id, time, milliseconds since the page opened, level, screen, event, detail.
+     It never holds an answer, a name, an email or pasted research: only lengths, choices and technical facts. */
+  var LOG = [], SEQ = 0, logT = null;
+  var SESSION = Math.random().toString(36).slice(2, 8), T0 = Date.now();
+  var DEBUG = /[?&]debug=1/.test(location.search);
+  var IN_APP_RE = /FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|MicroMessenger|TikTok/i;
+  function levelOf(ev){ return /failed|error|missing/.test(ev) ? "error" : (/retry|fallback|rejected|guard|slow|validation/.test(ev) ? "warn" : "info"); }
+  function errText(e){
+    if(e == null) return "unknown";
+    var t = (e.name && e.name !== "Error" ? e.name + ": " : "") + (e.message || String(e));
+    if(e.stack && t.indexOf("| stack:") < 0){   /* a wrapped error already carries the stack of the first one */
+      var st = String(e.stack).split("\n").map(function(l){ return l.trim().replace(/https?:\/\/[^\s)]*\//g, ""); }).filter(function(l){ return l && t.indexOf(l) < 0; }).slice(0, 5);
+      if(st.length) t += " | stack: " + st.join(" < ");
+    }
+    return t;
+  }
+  function persistLog(now){
+    clearTimeout(logT);
+    function write(){
+      try{ localStorage.setItem(STORE_KEY + "_log", JSON.stringify(LOG)); }
+      catch(e){ try{ LOG = LOG.slice(-150); localStorage.setItem(STORE_KEY + "_log", JSON.stringify(LOG)); }catch(e2){} }
+    }
+    if(now) write(); else logT = setTimeout(write, 300);
+  }
+  function fmtEntry(e){
+    return "#" + (e.n || "?") + " " + (e.t || "") + (e.ms != null ? " +" + e.ms + "ms" : "") + " " + (e.lv || "info").toUpperCase() + " [" + (e.s || "") + "] " + e.ev + (e.d ? ": " + e.d : "");
+  }
+  function paintLog(){ var p = $("logpre"); if(p) p.textContent = LOG.slice(-80).map(fmtEntry).join("\n"); }
+  var shipped = 0, lastShip = 0;
+  function shipLog(){
+    if(!LOG_URL || shipped >= 5 || Date.now() - lastShip < 10000) return;
+    shipped++; lastShip = Date.now();
+    setTimeout(function(){
+      try{ fetch(LOG_URL, { method:"POST", mode:"no-cors", body:JSON.stringify({ source:SOURCE, version:APP_VERSION, session:SESSION, report:report() }) }).catch(function(){}); }catch(e){}
+    }, 1500);
+  }
+  function log(ev, detail, level){
     try{
-      LOG.push({ t:new Date().toISOString(), s:SCREENS[S.i] || "", ev:ev, d:detail == null ? "" : String(detail).slice(0, 300) });
-      if(LOG.length > 150) LOG.shift();
-      localStorage.setItem(STORE_KEY + "_log", JSON.stringify(LOG));
-    }catch(e){}
+      var e = { n:++SEQ, id:SESSION, t:new Date().toISOString(), ms:Date.now() - T0, lv:level || levelOf(ev), s:SCREENS[S.i] || "", ev:ev, d:detail == null ? "" : String(detail).slice(0, 800) };
+      LOG.push(e);
+      if(LOG.length > 600) LOG.splice(0, LOG.length - 600);
+      persistLog(e.lv === "error");
+      if(window.console){
+        var f = e.lv === "error" ? console.error : (e.lv === "warn" ? console.warn : console.info);
+        if(f) f.call(console, "[BCW " + e.lv + "] " + ev + (e.d ? ": " + e.d : ""));
+      }
+      if(DEBUG) paintLog();
+      if(e.lv === "error") shipLog();
+    }catch(x){}
+  }
+  function envText(){
+    var n = navigator, c = n.connection || {}, tz = "?";
+    try{ tz = Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){}
+    return ["language " + n.language, "viewport " + window.innerWidth + " x " + window.innerHeight, "screen " + screen.width + " x " + screen.height,
+      "pixel ratio " + (window.devicePixelRatio || 1), "memory " + (n.deviceMemory || "?") + " GB", "cores " + (n.hardwareConcurrency || "?"),
+      "network " + (c.effectiveType || "?") + (n.onLine ? "" : " OFFLINE"), "touch points " + (n.maxTouchPoints || 0), "timezone " + tz,
+      "cookies " + n.cookieEnabled, "came from " + (document.referrer ? document.referrer.split("/").slice(0, 3).join("/") : "direct"),
+      "in-app browser " + IN_APP_RE.test(n.userAgent)].join(", ");
   }
   function report(){
     var R = parseResearch(S.research), a = S.a || {}, filled = 0;
@@ -310,11 +363,13 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     var L = [
       "Brand Channel Wizard diagnostic report",
       "version: " + APP_VERSION,
+      "session: " + SESSION,
       "url: " + location.href,
       "time: " + new Date().toISOString(),
       "browser: " + navigator.userAgent,
       "viewport: " + window.innerWidth + " x " + window.innerHeight,
       "online: " + navigator.onLine,
+      "environment: " + envText(),
       "progress saved in this browser: " + storageOK + (researchUnsaved ? " (research too large to save)" : ""),
       "screen: " + (SCREENS[S.i] || S.i),
       "gates: vidiq=" + S.vidiq + " app=" + (S.app || "none") + " connected=" + S.connected,
@@ -324,19 +379,26 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
       "images: logo=" + !!IMG.logo + " banner=" + !!IMG.banner,
       "pdf tools loaded: jspdf=" + !!(window.jspdf && window.jspdf.jsPDF) + " html2canvas=" + !!window.html2canvas,
       "pdf job running: " + JOB.pdf,
+      "log entries: " + LOG.length + ", errors " + LOG.filter(function(e){ return e.lv === "error"; }).length + ", warnings " + LOG.filter(function(e){ return e.lv === "warn"; }).length,
       "",
       "Events, oldest first:"
     ];
-    LOG.forEach(function(e){ L.push(e.t + " [" + e.s + "] " + e.ev + (e.d ? ": " + e.d : "")); });
+    var lastId = null;
+    LOG.forEach(function(e){
+      if(e.id !== lastId){ lastId = e.id; L.push("--- visit " + (e.id || "from an older version") + " ---"); }
+      L.push(fmtEntry(e));
+    });
     return L.join("\n");
   }
 
   /* ---------- status line ---------- */
-  var statusT = null, lastErrNote = 0;
+  var statusT = null, lastErrNote = 0, lastShown = "";
   function notify(text, kind, keep){
     var el = $("status"); if(!el) return;
     clearTimeout(statusT);
-    if(!text){ el.hidden = true; el.textContent = ""; el.setAttribute("data-kind", ""); return; }
+    if(!text){ el.hidden = true; el.textContent = ""; el.setAttribute("data-kind", ""); lastShown = ""; return; }
+    var key = text.replace(/\d+/g, "#");
+    if(key !== lastShown){ lastShown = key; log("shown-to-visitor", (kind || "info") + ": " + text, kind === "err" ? "warn" : "info"); }
     el.className = "status " + (kind || "info"); el.textContent = text; el.hidden = false; el.setAttribute("data-kind", kind || "info");
     if(kind === "ok" && !keep) statusT = setTimeout(function(){ notify(""); }, 9000);
   }
@@ -352,7 +414,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   function setStorage(ok){
     if(ok === storageOK) return;
     storageOK = ok;
-    log("storage", ok ? "working again" : "not available");
+    log("storage", ok ? "working again" : "not available", ok ? "info" : "error");
     if(!ok) notify("This browser is not saving your progress (private mode, or its storage is full). You can keep going, but keep this tab open until you have downloaded your card.", "err");
   }
   function save(){
@@ -364,10 +426,10 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
         localStorage.setItem(STORE_KEY, JSON.stringify(Object.assign({}, S, { research:"" })));
         setStorage(true);
         if(S.research && !researchUnsaved){
-          researchUnsaved = true; log("storage", "research too large to save, " + S.research.length + " characters");
+          researchUnsaved = true; log("storage", "research too large to save, " + S.research.length + " characters, " + errText(e), "warn");
           notify("Your research is too long to keep in this browser's storage. It is on the page now, so download your card before you close this tab.", "info");
         }
-      }catch(e2){ setStorage(false); }
+      }catch(e2){ if(storageOK) log("save-failed", errText(e2)); setStorage(false); }
     }
   }
   function saveSoon(){ clearTimeout(saveT); saveT = setTimeout(save, 400); }
@@ -375,8 +437,8 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     try{
       var raw = localStorage.getItem(STORE_KEY);
       if(raw){ var p = JSON.parse(raw); if(p && typeof p === "object"){ var a = Object.assign({}, S.a, (p.a && typeof p.a === "object") ? p.a : {}); Object.assign(S, p); S.a = a; } }
-    }catch(e){ log("load-failed", e && e.message); }
-    try{ var l = JSON.parse(localStorage.getItem(STORE_KEY + "_log") || "[]"); if(Array.isArray(l)) LOG = l.slice(-120); }catch(e){}
+    }catch(e){ log("load-failed", errText(e)); }
+    try{ var l = JSON.parse(localStorage.getItem(STORE_KEY + "_log") || "[]"); if(Array.isArray(l)) LOG = l.slice(-450); }catch(e){}
     try{ localStorage.setItem(STORE_KEY + "_probe", "1"); localStorage.removeItem(STORE_KEY + "_probe"); }catch(e){ storageOK = false; }
     sane();
   }
@@ -803,8 +865,8 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     function tryNext(){
       if(L.test()) return true;
       if(i >= L.urls.length){ log("lib-missing", name); return false; }
-      var u = L.urls[i++]; log("lib-load", u);
-      return loadScript(u).then(tryNext, function(e){ log("lib-load-failed", e && e.message); return tryNext(); });
+      var u = L.urls[i++], t0 = Date.now(); log("lib-load", u);
+      return loadScript(u).then(function(){ log("lib-loaded", u + ", " + (Date.now() - t0) + " ms"); return tryNext(); }, function(e){ log("lib-load-failed", u + ", " + (Date.now() - t0) + " ms: " + errText(e)); return tryNext(); });
     }
     return Promise.resolve().then(tryNext);
   }
@@ -837,6 +899,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     var M = 36, CW = W - M*2, TOP = 36, BOT = H - 46, y = TOP;
     var host = $("pdfhost"), blocks = cardBlocks(), i = 0;
     host.innerHTML = "";
+    log("pdf-layout", "scale " + (scale || 2) + ", " + blocks.length + " parts");
 
     function place(cv, b){
       if(!cv || cv.width < 2 || cv.height < 2) return;   /* an empty block draws nothing */
@@ -878,13 +941,19 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
         }
         return doc;
       }
-      var b = blocks[i++], el = document.createElement("div");
+      var b = blocks[i++], el = document.createElement("div"), t1 = Date.now();
+      var kind = b.img ? "images" : (b.link ? "program link" : (b.keep ? "heading" : "content"));
       el.className = "b"; el.innerHTML = b.h; host.appendChild(el);
       if(onStep) onStep(i, blocks.length);
       return withTimeout(window.html2canvas(el, { scale:scale || 2, backgroundColor:"#ffffff", logging:false, useCORS:true }), 25000, "pdf part " + i).then(function(cv){
         if(el.parentNode) host.removeChild(el);
-        place(cv, b);
+        var ms = Date.now() - t1;
+        if(ms > 1500) log("pdf-part-slow", "part " + i + " of " + blocks.length + " (" + kind + "), " + ms + " ms, canvas " + cv.width + " x " + cv.height);
+        try{ place(cv, b); }
+        catch(e){ throw new Error("placing part " + i + " of " + blocks.length + " (" + kind + ", canvas " + cv.width + " x " + cv.height + "): " + errText(e)); }
         return next();
+      }, function(e){
+        throw new Error("drawing part " + i + " of " + blocks.length + " (" + kind + "): " + errText(e));
       });
     }
     return Promise.resolve().then(next);
@@ -907,11 +976,11 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
       if(!ok){ log("pdf-fallback", "html2canvas missing"); simple = true; return textPdf(); }
       var fonts = (document.fonts && document.fonts.ready) ? withTimeout(document.fonts.ready, 3000, "fonts").catch(function(){}) : Promise.resolve();
       return fonts.then(function(){ return buildPdf(step, 2); }).catch(function(e){
-        log("pdf-retry", e && e.message); clearHost();
+        log("pdf-retry", errText(e)); clearHost();
         notify("Still working: trying a lighter version of your PDF. Keep this tab open.", "busy");
         return buildPdf(step, 1);
       }).catch(function(e){
-        log("pdf-fallback", e && e.message); clearHost(); simple = true;
+        log("pdf-fallback", errText(e)); clearHost(); simple = true;
         return textPdf();
       });
     }).then(function(doc){
@@ -925,7 +994,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
         : "Your PDF is ready and was sent to your downloads." + tail, "ok", true);
     }).catch(function(e){
       clearHost();
-      log("pdf-failed", e && e.message);
+      log("pdf-failed", errText(e));
       notify(e && e.message === "jspdf-missing"
         ? "The PDF tool could not load. Check your internet connection, then press Download the PDF again. The .md file works without it."
         : "The PDF could not be created on this device. Nothing is lost: download the .md file instead, it has the same content.", "err");
@@ -953,7 +1022,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
       aEl.href = url; aEl.download = name; aEl.rel = "noopener"; document.body.appendChild(aEl); aEl.click();
       setTimeout(function(){ if(aEl.parentNode) aEl.parentNode.removeChild(aEl); }, 1000);
       log("download", name + ", " + LAST[kind].size);
-    }catch(e){ log("download-failed", name + ": " + (e && e.message)); }
+    }catch(e){ log("download-failed", name + ": " + errText(e)); }
     var f = $("files"); if(f) f.innerHTML = filesHtml();
   }
 
@@ -962,7 +1031,12 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   function sendLead(payload){
     if(!WEBHOOK_URL){ log("lead", "no webhook set, skipped"); return; }
     S.leadState = { status:"pending", tries:(S.leadState ? S.leadState.tries : 0) + 1 }; save();
-    function mark(status, note){ if(S.leadState) S.leadState.status = status; save(); log("lead", status + (note ? ", " + note : "")); }
+    var t0 = Date.now();
+    function mark(status, note){
+      if(S.leadState) S.leadState.status = status; save();
+      log("lead", status + ", try " + (S.leadState ? S.leadState.tries : "?") + ", " + (Date.now() - t0) + " ms" + (note ? ", " + note : ""), status === "failed" ? "error" : (status === "sent" ? "info" : "warn"));
+    }
+    log("lead", "sending, try " + S.leadState.tries);
     try{
       fetch(WEBHOOK_URL, {
         method:"POST", headers:{"Content-Type":"application/json"},
@@ -979,10 +1053,10 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
         flat.append("ai_app", payload.ai_app);
         Object.keys(payload.answers).forEach(function(k){ flat.append(k, String(payload.answers[k])); });
         return fetch(WEBHOOK_URL, { method:"POST", mode:"no-cors", body:flat, keepalive:true }).then(function(){
-          mark("sent-unconfirmed", "form post after " + (e && e.message));
+          mark("sent-unconfirmed", "form post after " + errText(e));
         });
-      }).catch(function(e){ mark("failed", e && e.message); });
-    }catch(e){ mark("failed", e && e.message); }
+      }).catch(function(e){ mark("failed", errText(e)); });
+    }catch(e){ mark("failed", errText(e)); }
   }
   function leadPayload(){ return { name:S.lead.name, email:S.lead.email, source:SOURCE, ai_app:S.app, answers:Object.assign({}, S.a) }; }
   function retryLead(){
@@ -994,10 +1068,11 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     var label = btn.getAttribute("data-label") || btn.textContent;
     btn.setAttribute("data-label", label);
     function flash(t){ btn.textContent = t; setTimeout(function(){ btn.textContent = label; }, 1600); }
-    function done(){ flash("Copied"); }
+    var what = btn.getAttribute("data-copy") || btn.id || "button";
+    function done(how){ flash("Copied"); log("copy", what + ", " + text.length + " characters, via " + (typeof how === "string" ? how : "clipboard")); }
     function manual(why){
       /* Copying is blocked here: select the text so the visitor can copy it by hand. */
-      log("copy-failed", why);
+      log("copy-failed", what + ", " + text.length + " characters: " + why);
       flash("Copy by hand");
       var card = btn.closest ? btn.closest(".card") : null, pre = card ? card.querySelector("pre.out") : null;
       try{ if(pre){ var r = document.createRange(); r.selectNodeContents(pre); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } }catch(e){}
@@ -1012,7 +1087,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
         ok = document.execCommand("copy");
       }catch(e2){ ok = false; }
       if(ta.parentNode) ta.parentNode.removeChild(ta);
-      if(ok) done(); else manual((e && e.message) || "execCommand refused");
+      if(ok) done("execCommand"); else manual(e ? errText(e) : "execCommand refused");
     }
     try{
       if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
@@ -1022,9 +1097,11 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   /* ---------- screens ---------- */
   var stage = $("stage");
   function go(i, fromHistory){
+    var from = SCREENS[S.i];
     S.i = Math.max(0, Math.min(SCREENS.length - 1, i)); save();
     var st = $("status"); if(st && st.getAttribute("data-kind") !== "busy") notify("");
     render();
+    log("screen", from + " > " + SCREENS[S.i] + (fromHistory ? " (browser back or forward)" : ""));
     /* the phone's Back button moves one screen back instead of leaving the wizard */
     if(!fromHistory){ try{ history.pushState({ i:S.i }, ""); }catch(e){} }
     window.scrollTo(0, 0);
@@ -1055,7 +1132,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     if(n) n.addEventListener("click", function(){ if(!n.disabled){ if(onNext && onNext() === false) return; go(S.i + 1); } });
   }
   function onOpts(fn){
-    Array.prototype.forEach.call(stage.querySelectorAll(".opt"), function(b){ b.addEventListener("click", function(){ fn(this.dataset.v); }); });
+    Array.prototype.forEach.call(stage.querySelectorAll(".opt"), function(b){ b.addEventListener("click", function(){ log("choice", SCREENS[S.i] + " = " + this.dataset.v); fn(this.dataset.v); }); });
   }
   function progress(){
     var id = SCREENS[S.i], L = "", R = "", pct;
@@ -1069,7 +1146,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
 
   function render(){
     try{ draw(); }
-    catch(e){ log("render-failed", (SCREENS[S.i] || S.i) + ": " + (e && e.message)); try{ crash(); }catch(e2){} }
+    catch(e){ log("render-failed", (SCREENS[S.i] || S.i) + ": " + errText(e)); try{ crash(); }catch(e2){ log("crash-screen-failed", errText(e2)); } }
   }
   function draw(){
     /* guards: no skipping a gate */
@@ -1166,6 +1243,8 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
       if(q.type === "market"){ if(!clean(a.lang) || !clean(a.country)) err = "Fill in both to continue."; }
       if(q.type === "look" && !a.style) err = "Pick a style to continue.";
       $("err").textContent = err; $("err").hidden = !err;
+      var lens = Array.prototype.map.call(stage.querySelectorAll("input,textarea"), function(el){ return el.id.replace("f_", "") + " " + el.value.length; }).join(", ");
+      if(err) log("validation", q.id + ": " + err + " (lengths: " + lens + ")"); else log("answer", q.id + " accepted (lengths: " + lens + ")");
       return !err;
     }
     Array.prototype.forEach.call(stage.querySelectorAll("input,textarea"), function(el){
@@ -1197,7 +1276,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
       var name = $("leadName").value.trim(), email = $("leadEmail").value.trim(), err = $("formErr"), problem = "";
       if(!name) problem = "Enter your first name.";
       else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) problem = "Enter a valid email address, like name@example.com.";
-      if(problem){ err.textContent = problem; err.hidden = false; (name ? $("leadEmail") : $("leadName")).focus(); return; }
+      if(problem){ log("validation", "lead form: " + (name ? "email format, " + email.length + " characters" : "name empty")); err.textContent = problem; err.hidden = false; (name ? $("leadEmail") : $("leadName")).focus(); return; }
       var fresh = !S.lead || S.lead.email !== email;
       S.lead = { name:name, email:email };
       log("lead-form", fresh ? "submitted" : "same email again");
@@ -1252,12 +1331,18 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     COPY.check = cl.map(function(p, i){ return "Phase " + (i+1) + ": " + p.name + "\n" + p.items.map(function(it){ return "[ ] " + it[1] + "\n    " + it[2]; }).join("\n"); }).join("\n\n");
     h += "<div class='nav'><button type='button' class='btn ghost' id='edit'>Change my answers</button><button type='button' class='btn' id='next'>Next: paste your research back</button></div>";
     stage.innerHTML = h;
+    log("kit-shown", "name options " + nameOptions().length + ", handle options " + handleOptions().length + ", research prompt " + COPY.research.length + " characters, for " + appName());
     bindTabs(); bindCopy();
-    Array.prototype.forEach.call(stage.querySelectorAll("[data-chk]"), function(c){ c.addEventListener("change", function(){ S.checks[this.dataset.chk] = this.checked; save(); }); });
+    Array.prototype.forEach.call(stage.querySelectorAll("[data-chk]"), function(c){ c.addEventListener("change", function(){ S.checks[this.dataset.chk] = this.checked; save(); log("checklist", this.dataset.chk + " = " + this.checked); }); });
     $("edit").addEventListener("click", function(){ go(Q_FIRST); });
     $("next").addEventListener("click", function(){ go(S.i + 1); });
   }
 
+  var resT = null;
+  function logResearch(){
+    var R = parseResearch(S.research);
+    log("research", S.research.length + " characters, " + S.research.split("\n").length + " lines, found: " + (SECTIONS.filter(function(s){ return R[s[0]]; }).map(function(s){ return s[1]; }).join(", ") || "none") + ", missing: " + (SECTIONS.filter(function(s){ return !R[s[0]]; }).map(function(s){ return s[1]; }).join(", ") || "none") + ", unsorted " + (R.notes || "").length + " characters");
+  }
   function foundHtml(){
     var R = parseResearch(S.research);
     return SECTIONS.map(function(s){ return "<span class='chip" + (R[s[0]] ? " ok" : "") + "'>" + s[1] + (R[s[0]] ? ": found" : ": missing") + "</span>"; }).join("");
@@ -1266,6 +1351,8 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     if(!file) return;
     if(!/^image\//.test(file.type)){ log("image-rejected", kind + ", type " + (file.type || "unknown")); notify("That file is not an image. Choose a PNG or JPG.", "err"); return; }
     if(file.size > 30 * 1048576){ log("image-rejected", kind + ", " + Math.round(file.size / 1048576) + " MB"); notify("That image is over 30 MB. Export a smaller PNG or JPG and try again.", "err"); return; }
+    var t0 = Date.now();
+    log("image-read", kind + ", " + file.type + ", " + Math.round(file.size / 1024) + " KB");
     notify("Reading your image.", "busy");
     var fr = new FileReader();
     fr.onerror = function(){ log("image-failed", kind + ", could not read the file"); notify("The image could not be read. Try again, or export it as PNG or JPG.", "err"); };
@@ -1283,9 +1370,9 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
             var u = c.toDataURL(kind === "banner" ? "image/jpeg" : "image/png", 0.92);
             if(u && u.length > 100) src = u;
           }
-        }catch(e){ log("image-downscale-failed", e && e.message); }
+        }catch(e){ log("image-downscale-failed", errText(e)); }
         IMG[kind] = src; IMG[kind + "Size"] = w + " x " + h;
-        log("image-ok", kind + ", " + w + " x " + h);
+        log("image-ok", kind + ", " + w + " x " + h + ", " + file.type + ", " + Math.round(file.size / 1024) + " KB" + (src !== fr.result ? ", scaled down to fit " + max + " px" : "") + ", " + (Date.now() - t0) + " ms");
         notify("Image added. It stays on this device and is not kept after a reload.", "ok");
         cb();
       };
@@ -1315,7 +1402,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
       "<div class='drop'><label class='flabel' for='bannerFile'>Banner</label><input type='file' id='bannerFile' accept='image/*'><div id='bannerPrev'></div></div></div>" +
       "<div class='nav'><button type='button' class='btn ghost' id='back'>Back to the kit</button><button type='button' class='btn' id='next'>Next: build my card</button></div>";
     bindTabs(); previews();
-    $("research").addEventListener("input", function(){ S.research = this.value; saveSoon(); $("found").innerHTML = foundHtml(); });
+    $("research").addEventListener("input", function(){ S.research = this.value; saveSoon(); $("found").innerHTML = foundHtml(); clearTimeout(resT); resT = setTimeout(logResearch, 1500); });
     $("logoFile").addEventListener("change", function(){ readImage(this.files[0], "logo", previews); });
     $("bannerFile").addEventListener("change", function(){ readImage(this.files[0], "banner", previews); });
     bindNav();
@@ -1324,7 +1411,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
   function card(){
     var has = !!S.research.trim(), R0 = parseResearch(S.research);
     var nFound = SECTIONS.filter(function(s){ return R0[s[0]]; }).length;
-    var inApp = /FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|MicroMessenger|TikTok/i.test(navigator.userAgent);
+    var inApp = IN_APP_RE.test(navigator.userAgent);
     stage.innerHTML = tabs() +
       "<div class='card hl'><h3 id='qh' tabindex='-1'>Your " + CARD_TITLE + "</h3>" +
       "<p class='hint'>" + (has ? "Your texts, your research and your checklist in one place." : "You have not pasted any research yet, so those sections will be empty. You can still download the card now and come back later.") + "</p>" +
@@ -1345,13 +1432,13 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
         deliver("md", FILE_BASE + ".md", new Blob([buildMarkdown()], { type:"text/markdown;charset=utf-8" }));
         if(!JOB.pdf) notify("Your .md file is ready and was sent to your downloads.", "ok");
       }catch(e){
-        log("md-failed", e && e.message);
+        log("md-failed", errText(e));
         notify("The .md file could not be created. Use Copy the .md text instead, then paste it into a note.", "err");
       }
     });
     $("mdCopy").addEventListener("click", function(){
       try{ copyText(buildMarkdown(), this); log("md-copied", ""); }
-      catch(e){ softError("md-copy-failed", e && e.message); }
+      catch(e){ softError("md-copy-failed", errText(e)); }
     });
     $("pdfBtn").addEventListener("click", makePdf);
     /* two presses instead of a browser dialog, which some in-app browsers never show */
@@ -1364,32 +1451,44 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
         return;
       }
       clearTimeout(armed);
-      try{ localStorage.removeItem(STORE_KEY); localStorage.removeItem(STORE_KEY + "_log"); }catch(e){}
+      log("restart", "all answers cleared by the visitor"); persistLog(true);
+      try{ localStorage.removeItem(STORE_KEY); }catch(e){}
       location.reload();
     });
   }
 
   /* ---------- safety net: nothing fails silently, and nothing shows a raw error ---------- */
   window.addEventListener("error", function(e){
-    if(e && e.target && e.target !== window && e.target.tagName){ log("resource-failed", (e.target.src || e.target.href || e.target.tagName)); return; }
-    softError("error", (e && e.message || "unknown") + " at line " + (e && e.lineno));
+    if(e && e.target && e.target !== window && e.target.tagName){ log("resource-failed", e.target.tagName.toLowerCase() + " " + (e.target.src || e.target.href || "") + (navigator.onLine ? "" : " (offline)")); return; }
+    softError("error", (e && e.error ? errText(e.error) : (e && e.message || "unknown")) + " at " + String(e && e.filename || "").split("/").pop() + ":" + (e && e.lineno) + ":" + (e && e.colno));
   }, true);
   window.addEventListener("unhandledrejection", function(e){
-    softError("promise-error", e && e.reason && (e.reason.message || String(e.reason)));
+    softError("promise-error", errText(e && e.reason));
   });
   window.addEventListener("online", function(){ log("network", "online"); });
   window.addEventListener("offline", function(){ log("network", "offline"); });
-  window.addEventListener("pagehide", function(){ save(); });
-  document.addEventListener("visibilitychange", function(){ if(document.hidden) save(); });
+  window.addEventListener("pagehide", function(){ log("page", "closed or left" + (JOB.pdf ? " while the PDF was being built" : "")); save(); persistLog(true); });
+  document.addEventListener("visibilitychange", function(){ log("page", document.hidden ? "tab hidden" + (JOB.pdf ? " while the PDF was being built" : "") : "tab visible again"); if(document.hidden){ save(); persistLog(true); } });
+  document.addEventListener("click", function(e){
+    var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+    if(a) log("link", (a.id ? a.id + ": " : "") + (a.href.indexOf("blob:") === 0 ? "file opened in a new tab" : a.href));
+  }, true);
   window.addEventListener("beforeunload", function(e){ if(JOB.pdf){ e.preventDefault(); e.returnValue = ""; } });
   window.addEventListener("popstate", function(e){
     if(e.state && typeof e.state.i === "number") go(e.state.i, true);
   });
   $("diagBtn").addEventListener("click", function(){ copyText(report(), this); });
+  $("logBtn").addEventListener("click", function(){
+    try{ deliver("log", "brand-channel-wizard-log.txt", new Blob([report()], { type:"text/plain;charset=utf-8" })); notify("The log file was sent to your downloads.", "ok"); }
+    catch(e){ log("log-download-failed", errText(e)); copyText(report(), this); }
+  });
+  window.BCW = { version:APP_VERSION, report:report, log:function(){ return LOG.slice(); } };   /* for the browser console */
   $("ver").textContent = "v" + APP_VERSION;
 
   load();
-  log("open", "v" + APP_VERSION + ", screen " + SCREENS[S.i] + (storageOK ? "" : ", storage not available"));
+  log("open", "v" + APP_VERSION + ", screen " + SCREENS[S.i] + ", saved state " + (function(){ try{ return (localStorage.getItem(STORE_KEY) || "").length; }catch(e){ return "?"; } })() + " characters" + (storageOK ? "" : ", storage not available") + (DEBUG ? ", debug view on" : ""));
+  log("env", navigator.userAgent + " | " + envText());
+  if(DEBUG){ $("logview").hidden = false; paintLog(); }
   render();
   try{ history.replaceState({ i:S.i }, ""); }catch(e){}   /* after render, so the guards have already picked the real screen */
   if(!storageOK) notify("This browser is not saving your progress (private mode, or its storage is blocked). You can keep going, but keep this tab open until you have downloaded your card.", "err");
