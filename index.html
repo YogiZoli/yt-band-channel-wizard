@@ -338,7 +338,7 @@ var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6
     if(clean(a.course)) o.push("The course | " + a.course.trim());
     if(clean(a.site)) o.push("Website | " + a.site.trim());
     if(!o.length) o.push("Start here (free) | [link to your free gift, add this first]");
-    return "Link title | URL\n" + o.join("\n") + "\n\nKeep the free gift as link number one. It is the only link shown on your banner.";
+    return "Link title | URL\n" + o.join("\n") + "\n\nKeep the free gift as link number one. It is the one link YouTube shows on your channel header.";
   }
   function seeds(){
     var a = S.a, t = low(a.topic), o = lines(a.phrases).slice(0, 3).map(low);
