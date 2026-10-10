@@ -1,0 +1,1039 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Brand Channel Wizard</title>
+<meta name="description" content="Set up a YouTube Brand Channel for your course in 5 phases. Answer a few questions and get ready texts, a research prompt, image prompts and a click by click checklist.">
+<style>
+  :root{
+    --ground:#FFFFFF; --surface:#FFFFFF; --surface-2:#F4F6F5; --ink:#121A16;
+    --muted:#55635C; --line:#DCE3DF; --green:#17C05B; --green-deep:#10A34B;
+    --green-soft:#17C05B16; --on-green:#FFFFFF; --red:#E0243B;
+    --shadow:0 1px 2px #121a1610, 0 6px 18px -10px #121a1626;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0A120E; --surface:#121C17; --surface-2:#18241E; --ink:#EAF2EE;
+      --muted:#93A69C; --line:#22332B; --green:#19C862; --green-deep:#13A853;
+      --green-soft:#19C86222; --on-green:#04140A; --red:#FF5A6E;
+      --shadow:0 1px 2px #0007, 0 10px 26px -14px #000a;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0A120E; --surface:#121C17; --surface-2:#18241E; --ink:#EAF2EE;
+    --muted:#93A69C; --line:#22332B; --green:#19C862; --green-deep:#13A853;
+    --green-soft:#19C86222; --on-green:#04140A; --red:#FF5A6E;
+    --shadow:0 1px 2px #0007, 0 10px 26px -14px #000a;
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{
+    margin:0;background:var(--ground);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.45;
+    padding-inline:16px;padding-block:10px 36px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:11px}
+  header{text-align:center}
+  h1{margin:0;font-weight:800;letter-spacing:-.025em;line-height:1.15;font-size:clamp(20px,5.2vw,32px)}
+  .sub{margin:2px 0 0;font-size:clamp(12.5px,3.1vw,15px);font-weight:700;color:var(--muted)}
+
+  /* progress */
+  .prog{display:flex;flex-direction:column;gap:6px}
+  .progtop{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .bar{height:7px;border-radius:99px;background:var(--surface-2);overflow:hidden;border:1px solid var(--line)}
+  .bar i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .25s ease}
+
+  /* green band: the question */
+  .band{background:var(--green);color:var(--on-green);border-radius:14px;padding:16px 16px 17px}
+  .steptag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;opacity:.94}
+  .steptag .n{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;background:var(--on-green);color:var(--green);font-size:10.5px;line-height:1;font-weight:800}
+  .band h2{margin:8px 0 0;font-size:clamp(20px,5vw,27px);font-weight:800;letter-spacing:-.02em;line-height:1.18;text-wrap:balance}
+  .why{margin:8px 0 0;font-size:clamp(13.5px,3.4vw,15.5px);font-weight:700;line-height:1.4;opacity:.96}
+
+  /* white card: the answer */
+  .card{border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);padding:15px;display:flex;flex-direction:column;gap:11px}
+  .card.hl{border:2px solid var(--green)}
+  .card h3{margin:0;font-size:17px;font-weight:800;letter-spacing:-.015em;line-height:1.25}
+  .card p{margin:0}
+  .flabel{font-size:13.5px;font-weight:800;margin:0}
+  .hint{margin:0;font-size:13.5px;font-weight:600;color:var(--muted);line-height:1.42}
+  .field{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  @media (max-width:620px){.two{grid-template-columns:1fr}}
+  input[type=text],input[type=email],input[type=url],textarea{
+    width:100%;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:11px;
+    padding:12px 13px;font-family:inherit;font-size:16px;font-weight:700;
+  }
+  textarea{min-height:104px;resize:vertical;line-height:1.4}
+  textarea.tall{min-height:240px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:500}
+  input:focus,textarea:focus{outline:none;border-color:var(--green)}
+  input[type=color]{width:54px;height:46px;border:2px solid var(--line);border-radius:11px;background:var(--surface-2);padding:3px;cursor:pointer}
+
+  .opts{display:flex;flex-direction:column;gap:9px}
+  .opt{
+    appearance:none;cursor:pointer;text-align:left;width:100%;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);
+    border-radius:12px;padding:13px 14px;font-family:inherit;font-size:16px;font-weight:800;line-height:1.3;
+    display:flex;flex-direction:column;gap:2px;min-height:52px;justify-content:center;
+  }
+  .opt small{font-size:13px;font-weight:600;color:var(--muted)}
+  .opt:hover{border-color:var(--green)}
+  .opt:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .opt[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+
+  .btn{appearance:none;border:0;background:var(--green);color:var(--on-green);cursor:pointer;font-family:inherit;font-size:16px;font-weight:800;padding:13px 19px;border-radius:11px;min-height:48px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+  .btn:hover{background:var(--green-deep)}
+  .btn:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .btn.ghost{background:var(--surface-2);color:var(--ink);border:2px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--green);background:var(--surface-2)}
+  .btn.small{font-size:13.5px;padding:8px 13px;min-height:36px;border-radius:9px}
+  .btn[disabled]{opacity:.5;cursor:default}
+  .nav{display:flex;gap:9px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .nav .grow{flex:1}
+  .formerr{color:var(--red);font-size:13.5px;font-weight:700;margin:0}
+
+  .steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px;counter-reset:s}
+  .steps li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;font-size:15px;font-weight:600;line-height:1.42}
+  .steps li::before{content:counter(s);width:26px;height:26px;border-radius:50%;background:var(--green);color:var(--on-green);display:grid;place-items:center;font-size:13px;font-weight:800}
+  a{color:var(--green-deep);font-weight:800}
+  code,.path{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 5px;font-weight:600;overflow-wrap:anywhere}
+
+  /* tabs after the gate */
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .tab{appearance:none;cursor:pointer;border:2px solid var(--line);background:var(--surface-2);color:var(--muted);border-radius:11px;padding:9px 6px;font-family:inherit;font-size:13px;font-weight:800;line-height:1.2;min-height:44px}
+  .tab[aria-current="true"]{border-color:var(--green);background:var(--green);color:var(--on-green)}
+  .tab:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+
+  .sechead{margin:8px 0 0;font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--green-deep)}
+  .blockhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .out{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:14.5px;font-weight:600;line-height:1.5;max-height:340px;overflow:auto}
+  .out.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;font-weight:500}
+
+  .phase{display:flex;flex-direction:column;gap:8px}
+  .phase + .phase{border-top:1px solid var(--line);padding-top:12px}
+  .phase h4{margin:0;font-size:15px;font-weight:800}
+  .chk{display:grid;grid-template-columns:24px 1fr;gap:9px;align-items:start;font-size:14.5px;font-weight:600;line-height:1.42;cursor:pointer}
+  .chk input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--green)}
+  .chk .p{display:block;margin-top:3px;font-size:13px;color:var(--muted);font-weight:600}
+
+  /* uploads */
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:9px;background:var(--surface-2)}
+  .logos{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .logos figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--muted)}
+  .logos img{border-radius:50%;object-fit:cover;background:#fff;border:1px solid var(--line)}
+  .banner{position:relative;width:100%;aspect-ratio:2560/1440;border-radius:8px;overflow:hidden;background:#0002}
+  .banner img{width:100%;height:100%;object-fit:cover;display:block}
+  .banner .desk{position:absolute;left:0;right:0;top:35.3125%;height:29.375%;border-block:2px dashed #ffffffd9;box-shadow:0 0 0 1px #0006}
+  .banner .safe{position:absolute;left:19.8047%;width:60.3906%;top:35.3125%;height:29.375%;border:3px solid #17C05B;box-shadow:0 0 0 2000px #00000073}
+  .banner .safe span{position:absolute;left:0;top:-22px;background:#17C05B;color:#fff;font-size:10.5px;font-weight:800;padding:2px 6px;border-radius:4px;white-space:nowrap}
+  .found{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:12px;font-weight:800;border-radius:99px;padding:4px 10px;border:1px solid var(--line);color:var(--muted);background:var(--surface-2)}
+  .chip.ok{background:var(--green-soft);border-color:var(--green);color:var(--green-deep)}
+
+  .cta{font-size:15.5px;font-weight:700;line-height:1.4;margin:0}
+  footer{color:var(--muted);font-size:12.5px;font-weight:600;line-height:1.55;text-align:center}
+
+  /* rendered research: used on screen (themed) and in the PDF host (fixed light colours) */
+  .md h4{margin:0 0 6px;font-size:15px;font-weight:800}
+  .md p{margin:0 0 6px;font-size:13.5px;line-height:1.45}
+  .md ul{margin:0 0 6px;padding-left:19px;font-size:13.5px}
+  .md .tw{overflow-x:auto}
+  .md table{border-collapse:collapse;width:100%;font-size:12px;line-height:1.35;margin:0 0 6px}
+  .md th,.md td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+  .md th{background:var(--surface-2);font-weight:800}
+
+  .pdfhost{position:fixed;left:-12000px;top:0;width:760px;background:#fff;color:#121A16;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.45}
+  .pdfhost .b{padding:0 0 12px;background:#fff}
+  .pdfhost .hero{background:#17C05B;color:#fff;border-radius:12px;padding:22px 24px}
+  .pdfhost .hero .k{font-size:11px;font-weight:700;letter-spacing:1.5px}
+  .pdfhost .hero .t{font-size:27px;font-weight:700;line-height:1.15;margin:6px 0}
+  .pdfhost .hero .m{font-size:13px}
+  .pdfhost .sh{font-size:17px;font-weight:700;border-bottom:2px solid #17C05B;padding:8px 0 5px;color:#121A16}
+  .pdfhost .lab{font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#10A34B;margin-bottom:3px}
+  .pdfhost .tx{white-space:pre-wrap;overflow-wrap:anywhere;background:#F4F6F5;border-radius:8px;padding:9px 11px;font-size:12.5px}
+  .pdfhost .md th,.pdfhost .md td{border-color:#DCE3DF}
+  .pdfhost .md th{background:#E8F9EF}
+  .pdfhost .md .tw{overflow:visible}
+  .pdfhost .ci{display:grid;grid-template-columns:16px 1fr;gap:8px;font-size:12px;margin-bottom:5px}
+  .pdfhost .ci i{width:12px;height:12px;border:1.5px solid #55635C;border-radius:3px;margin-top:2px;display:block}
+  .pdfhost .ci i.d{background:#17C05B;border-color:#17C05B}
+  .pdfhost .ci span{color:#55635C;display:block;font-size:11px}
+  .pdfhost .imgs{display:flex;gap:16px;align-items:center}
+  .pdfhost .imgs img.l{width:120px;height:120px;border-radius:50%;object-fit:cover}
+  .pdfhost .imgs img.bn{width:100%;border-radius:8px;display:block}
+  .pdfhost .ctab{background:#17C05B;color:#fff;border-radius:12px;padding:18px 20px;font-size:15px;font-weight:700}
+  .pdfhost .ctab div{font-size:12.5px;font-weight:400;margin-top:5px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Brand Channel Wizard</h1>
+    <p class="sub">Your YouTube channel for your course, set up right in 5 phases</p>
+  </header>
+  <div class="prog" id="prog">
+    <div class="progtop"><span id="progL"></span><span id="progR"></span></div>
+    <div class="bar"><i id="progBar" style="width:0%"></i></div>
+  </div>
+  <main id="stage" class="wrap" style="gap:11px"></main>
+  <footer>
+    Everything runs in your browser. Your images never leave your device.
+  </footer>
+</div>
+<div class="pdfhost" id="pdfhost" aria-hidden="true"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+/* ===== SETTINGS: the two things to edit ===== */
+var WEBHOOK_URL = "";   // GHL inbound webhook. Empty = no POST, the kit is still delivered.
+var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6-pillar cohort program page
+/* ============================================ */
+
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var SOURCE = "brand-channel-wizard";
+  var VIDIQ_SIGNUP = "https://vidiq.com/";
+  var VIDIQ_MCP_GUIDE = "https://vidiq.com/mcp/";
+  var VIDIQ_MCP_URL = "https://mcp.vidiq.com/mcp";
+  var CTA_LINE = "Next step: build this channel with a group in my 6-pillar cohort program.";
+  var CARD_TITLE = "YouTube Evergreen Organic Traffic Card";
+  var FILE_BASE = "youtube-evergreen-organic-traffic-card";
+
+  var PHASES = [
+    "Account and profile",
+    "Brand Channel, handle, verification",
+    "Identity and keyword research",
+    "Channel customization",
+    "Studio defaults and community moderation"
+  ];
+
+  /* One question per screen. Each one says why it asks. */
+  var QUESTIONS = [
+    { id:"who", phase:1, type:"text", key:"who",
+      title:"Who do you help?",
+      why:"I ask because a channel for everyone gets found by no one. One clear group makes every later step easier.",
+      label:"Finish the sentence: I help ...", ph:"busy yoga teachers" },
+    { id:"result", phase:1, type:"text", key:"result",
+      title:"What do you help them do?",
+      why:"I ask because people search for a result, not for a course. This becomes your tagline.",
+      label:"Finish the sentence: I help them ...", ph:"fill their classes without paid ads" },
+    { id:"topic", phase:1, type:"text", key:"topic",
+      title:"What is your course about, in two or three words?",
+      why:"I ask because YouTube needs a plain topic to file your channel under.",
+      label:"Your topic", ph:"yoga studio marketing" },
+    { id:"face", phase:1, type:"face",
+      title:"Is the channel you, or a brand?",
+      why:"I ask because it decides the name, the handle and the profile picture.",
+      opts:[["person","It is me","My own name and my face"],["brand","It is a brand","A business or course name"]] },
+    { id:"team", phase:2, type:"choice", key:"team",
+      title:"Will anyone else ever touch this channel?",
+      why:"I ask because a Brand Channel lets you add a helper, or hand the channel over later, without sharing your Google password.",
+      opts:[["solo","Just me, for now",""],["team","A helper or a team",""],["sell","I may sell or hand it over one day",""]] },
+    { id:"phrases", phase:3, type:"area", key:"phrases",
+      title:"What would your student type into YouTube today?",
+      why:"I ask because these are the seeds for your keyword research. Their words, not yours.",
+      label:"Up to 3 searches, one per line", ph:"how to get more yoga students\nyoga studio marketing ideas\nhow to fill a yoga class" },
+    { id:"pain", phase:3, type:"text", key:"pain",
+      title:"What frustrates them most right now?",
+      why:"I ask because the best videos start from a problem the viewer already feels.",
+      label:"In their own words", ph:"posting every day and still teaching to empty rooms" },
+    { id:"proof", phase:3, type:"text", key:"proof",
+      title:"Why should they listen to you?",
+      why:"I ask because one honest line of experience makes a stranger trust your About section.",
+      label:"One line of real experience or results", ph:"12 years running a studio, 300 teachers trained" },
+    { id:"market", phase:3, type:"market",
+      title:"Which language and country are you aiming at?",
+      why:"I ask because search numbers change a lot between languages and countries.",
+      },
+    { id:"links", phase:4, type:"links",
+      title:"Where should a viewer go after watching?",
+      why:"I ask because the first link on your channel should be your free gift, so views turn into email subscribers. Leave blank what you do not have yet.",
+      },
+    { id:"look", phase:4, type:"look",
+      title:"How should the channel feel?",
+      why:"I ask because your logo and banner prompts need one clear style to look like they belong together.",
+      opts:[["Clean and minimal","Clean and minimal","Lots of space, calm, simple shapes"],["Bold and energetic","Bold and energetic","Strong contrast, big type"],["Warm and personal","Warm and personal","Soft, friendly, human"],["Premium and dark","Premium and dark","Dark background, refined accents"]] },
+    { id:"pace", phase:5, type:"choice", key:"pace",
+      title:"How often can you really publish?",
+      why:"I ask because a pace you keep beats a pace you promise. It goes into your About text and your video plan.",
+      opts:[["every two weeks","Every two weeks",""],["every week","Every week",""],["twice a week","Twice a week",""]] },
+    { id:"mod", phase:5, type:"choice", key:"mod",
+      title:"How hands-on do you want to be with comments?",
+      why:"I ask because YouTube can hold risky comments for you. This sets your moderation default.",
+      opts:[["basic","Light touch","Hold only the clearly bad ones"],["strict","Careful","Hold more comments for my review"]] }
+  ];
+  var REQUIRED = { who:1, result:1, topic:1, phrases:1, pain:1, proof:1 };
+
+  var SCREENS = ["g1","g2","g3"].concat(QUESTIONS.map(function(q){ return q.id; })).concat(["email","kit","paste","card"]);
+  var Q_FIRST = 3, EMAIL_I = SCREENS.indexOf("email"), KIT_I = EMAIL_I + 1;
+
+  var S = { i:0, vidiq:false, app:"", connected:false, lead:null, research:"", checks:{},
+            a:{ lang:"English", country:"United States", color:"#17C05B" } };
+  var IMG = { logo:null, banner:null };   /* memory only: never stored, never sent */
+
+  function save(){ try{ localStorage.setItem("bcw_state", JSON.stringify(S)); }catch(e){} }
+  function load(){
+    try{
+      var raw = localStorage.getItem("bcw_state");
+      if(raw){ var p = JSON.parse(raw); if(p && typeof p === "object"){ var a = Object.assign({}, S.a, p.a || {}); Object.assign(S, p); S.a = a; } }
+    }catch(e){}
+  }
+
+  /* ---------- small helpers ---------- */
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]; }); }
+  function clean(s){ return String(s || "").replace(/\s+/g, " ").trim().replace(/[.!\s]+$/, ""); }
+  function cap(s){ s = clean(s); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function low(s){ s = clean(s); return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
+  function title(s){ return clean(s).split(" ").map(function(w){ return w.length > 3 || /^[A-Z]/.test(w) ? w.charAt(0).toUpperCase() + w.slice(1) : w; }).join(" ").replace(/^./, function(c){ return c.toUpperCase(); }); }
+  function slug(s){ var t = String(s || ""); if(t.normalize) t = t.normalize("NFD").replace(/[̀-ͯ]/g, ""); return t.toLowerCase().replace(/[^a-z0-9]/g, ""); }
+  function uniq(arr){ var seen = {}, out = []; arr.forEach(function(x){ var k = String(x).toLowerCase(); if(x && !seen[k]){ seen[k] = 1; out.push(x); } }); return out; }
+  function lines(s){ return String(s || "").split(/\n+/).map(clean).filter(Boolean); }
+  function today(){ var d = new Date(); return d.getFullYear() + "-" + ("0" + (d.getMonth()+1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function appName(){ return S.app === "chatgpt" ? "ChatGPT" : "Claude"; }
+
+  /* ---------- the kit: ready text built from the answers ---------- */
+  function baseName(){ var a = S.a; return clean(a.name) || title(a.topic) || "Your Channel"; }
+  function nameOptions(){
+    var a = S.a, n = baseName(), T = title(a.topic), first = n.split(" ")[0];
+    var o = a.face === "brand"
+      ? [n, n + " Academy", n + " | " + T, T + " by " + n, n + " TV"]
+      : [n, T + " with " + first, n + " | " + T, first + " Teaches " + T, T + " School with " + first];
+    return uniq(o);
+  }
+  function handleOptions(){
+    var a = S.a, n = slug(baseName()), t = slug(a.topic), first = slug(baseName().split(" ")[0]);
+    var o = a.face === "brand"
+      ? [n, n + "academy", n + "tv", n + "hq", t + "by" + n]
+      : [n, first + t, t + "with" + first, n + "tv", "learnwith" + first];
+    return uniq(o.map(function(h){ return h.slice(0, 30); }).filter(function(h){ return h.length >= 3; })).map(function(h){ return "@" + h; });
+  }
+  function taglines(){
+    var a = S.a;
+    return [
+      "I help " + low(a.who) + " " + low(a.result) + ".",
+      title(a.topic) + " for " + low(a.who) + ".",
+      "Helping " + low(a.who) + " " + low(a.result) + ", one video at a time."
+    ];
+  }
+  function aboutText(){
+    var a = S.a, p = [];
+    p.push(cap(a.topic) + " for " + low(a.who) + ". I help " + low(a.who) + " " + low(a.result) + ".");
+    p.push("The struggle I hear most: " + low(a.pain) + ". This channel is here to fix that, one clear video at a time.");
+    p.push("Why listen to me: " + low(a.proof) + ".");
+    p.push("New videos " + (a.pace || "every week") + ". Subscribe so you do not miss the next one.");
+    if(clean(a.gift)) p.push("Start here, free: " + a.gift.trim());
+    p.push("Business enquiries: [your contact email]");
+    return p.join("\n\n");
+  }
+  function linksText(){
+    var a = S.a, o = [];
+    if(clean(a.gift)) o.push("Start here (free) | " + a.gift.trim());
+    if(clean(a.course)) o.push("The course | " + a.course.trim());
+    if(clean(a.site)) o.push("Website | " + a.site.trim());
+    if(!o.length) o.push("Start here (free) | [link to your free gift, add this first]");
+    return "Link title | URL\n" + o.join("\n") + "\n\nKeep the free gift as link number one. It is the only link shown on your banner.";
+  }
+  function seeds(){
+    var a = S.a, t = low(a.topic), o = lines(a.phrases).slice(0, 3).map(low);
+    o = o.concat([t, t + " for beginners", "how to " + low(a.result), t + " tips", t + " mistakes", t + " tutorial", t + " step by step", "best " + t + " strategy", t + " for " + low(a.who), "how to start " + t]);
+    return uniq(o).slice(0, 10);
+  }
+
+  function researchPrompt(){
+    var a = S.a, gpt = S.app === "chatgpt", thing = gpt ? "vidIQ app" : "vidIQ connector";
+    var L = [];
+    L.push("You are my YouTube channel strategist. I am a course creator setting up a new channel.");
+    L.push("");
+    L.push("RULES");
+    L.push("1. Use the " + thing + " that is connected in this chat for every number. Never guess or invent data.");
+    L.push(gpt
+      ? "2. If you cannot see the vidIQ app in this chat, stop and tell me to switch it on from the plus menu."
+      : "2. If you cannot see the vidIQ tools in this chat, stop and tell me to switch the connector on from the plus menu, under Connectors.");
+    L.push("3. If one vidIQ call fails or returns nothing, write n/a in that cell, say so in one line, and continue.");
+    L.push("4. Work through the 7 steps in order. Finish one step before you start the next.");
+    L.push("5. vidIQ credits are limited. Batch your calls and do not repeat a call you already made.");
+    L.push("");
+    L.push("MY CHANNEL");
+    L.push("Audience: " + clean(a.who));
+    L.push("Result I help them get: " + clean(a.result));
+    L.push("Topic of my course: " + clean(a.topic));
+    L.push("Their biggest frustration: " + clean(a.pain));
+    L.push("Why they should listen to me: " + clean(a.proof));
+    L.push("Language: " + clean(a.lang) + ". Country: " + clean(a.country) + ".");
+    L.push("Publishing pace: " + (a.pace || "every week") + ".");
+    L.push("Working channel name: " + baseName());
+    L.push("");
+    L.push("STEP 1. Seed expansion");
+    L.push("Start from these 10 seeds:");
+    seeds().forEach(function(s, i){ L.push((i+1) + ". " + s); });
+    L.push("Replace weak seeds with the phrases a real viewer types into YouTube in " + clean(a.lang) + ". Keep exactly 10.");
+    L.push("Table columns: # | Seed | Why this seed");
+    L.push("");
+    L.push("STEP 2. Keyword research");
+    L.push("Run vidIQ keyword research on every seed (the tool is usually called vidiq_keyword_research). Collect at least 30 keywords, related keywords included.");
+    L.push("Table columns: Rank | Keyword | Monthly search volume | Competition | Overall score | From seed");
+    L.push("Rank by overall score, best first. After the table add one line that starts with \"Channel keywords:\" and lists the 12 best, comma separated.");
+    L.push("");
+    L.push("STEP 3. Competitor channels");
+    L.push("Find five channels that already serve this audience (channel search, similar channels, channel stats, performance trends).");
+    L.push("Table columns: Channel | Handle | Subscribers | Total views | Videos | Growth, last 90 days | What works for them");
+    L.push("");
+    L.push("STEP 4. Niche outliers");
+    L.push("Find 10 videos in this niche that did far better than their own channel's normal (the tool is usually called vidiq_outliers).");
+    L.push("Table columns: Video title | Channel | Views | Times above channel average | Published | Why it won");
+    L.push("");
+    L.push("STEP 5. Content gaps");
+    L.push("Compare steps 2, 3 and 4. List 8 topics with real search demand that the competitors cover badly or not at all.");
+    L.push("Table columns: Gap | Evidence | Video angle | Priority");
+    L.push("");
+    L.push("STEP 6. Three pillars, each mapped to a playlist");
+    L.push("Pick exactly three content pillars from the data. Give each pillar one playlist. Add a fourth playlist named \"Start here\".");
+    L.push("Pillars table columns: Pillar | Who it is for | Core keywords | Why this pillar");
+    L.push("Playlists table columns: Playlist title | Pillar | Target keyword | One line description");
+    L.push("");
+    L.push("STEP 7. First 20 video titles");
+    L.push("Write 20 titles from the best keywords and gaps. Score each one with vidIQ title scoring if it is available. Put the easiest wins first.");
+    L.push("Table columns: Priority | Title | Target keyword | Pillar | Playlist | Search volume | Competition | Title score | Why now");
+    L.push("");
+    L.push("OUTPUT FORMAT, strict");
+    L.push("One markdown document. Exactly these eight H2 headings, in this order, spelled like this:");
+    L.push("## Seeds");
+    L.push("## Keywords");
+    L.push("## Competitors");
+    L.push("## Outliers");
+    L.push("## Gaps");
+    L.push("## Pillars");
+    L.push("## Playlists");
+    L.push("## Video List");
+    L.push("Under each heading: one clean markdown table with the columns above. No line breaks inside a cell. No text before the first heading and none after the last table.");
+    L.push("Keywords and titles in " + clean(a.lang) + ". Column headers in English.");
+    L.push(gpt
+      ? "Put the whole document in one code block so I can copy it in one click. If you run out of room, stop at the end of a section and wait for me to say continue."
+      : "Put the whole document in one markdown code block so I can copy it in one click.");
+    return L.join("\n");
+  }
+
+  function logoPrompt(){
+    var a = S.a, n = baseName();
+    return [
+      "Design a YouTube profile picture for the channel \"" + n + "\".",
+      "Topic: " + clean(a.topic) + ". Audience: " + clean(a.who) + ".",
+      "Canvas: square, 1:1, export at 800 x 800 px.",
+      "YouTube shows it inside a circle, so keep everything important inside the centered circle and leave the corners empty.",
+      "It must stay readable at very small size (about 98 x 98 px, and smaller next to comments). So: one simple mark or at most 1 to 3 large letters, thick shapes, strong contrast, no thin lines, no small text, no tagline.",
+      a.face === "brand"
+        ? "Make a simple logo mark for the brand. A monogram built from the initials of \"" + n + "\" is a good option."
+        : "Option A: a clean monogram from the initials of \"" + n + "\". Option B: I will upload my photo, then make a tight head and shoulders portrait on a plain background in the brand color.",
+      "Style: " + (a.style || "Clean and minimal") + ". Main brand color: " + (a.color || "#17C05B") + ", plus one neutral.",
+      "Flat background, no mockup, no border, no watermark."
+    ].join("\n");
+  }
+  function bannerPrompt(){
+    var a = S.a, n = baseName();
+    return [
+      "Design a YouTube channel banner for the channel \"" + n + "\".",
+      "Canvas: 2560 x 1440 px (16:9). Generate in 16:9 and export at exactly 2560 x 1440.",
+      "Safe area: a centered rectangle of 1546 x 423 px. ALL text and the logo must sit inside this rectangle. Phones show only this area, desktop shows a 2560 x 423 strip, TVs show the full canvas.",
+      "Text inside the safe area, spelled exactly:",
+      "  Line 1, large: " + n,
+      "  Line 2, smaller: " + taglines()[0],
+      "  Line 3, small: New videos " + (a.pace || "every week"),
+      "The logo or profile mark sits on the left of the text, also inside the safe area.",
+      "The background fills the whole 2560 x 1440 canvas and stays calm outside the safe area: no text, no faces and no key details there.",
+      "Style: " + (a.style || "Clean and minimal") + ". Main brand color: " + (a.color || "#17C05B") + ", plus one neutral. High contrast between text and background.",
+      "No extra words, no mockup, no device frame, no watermark."
+    ].join("\n");
+  }
+
+  /* ---------- the 5 phase checklist, with YouTube Studio click paths ---------- */
+  function checklist(){
+    var a = S.a, strict = a.mod === "strict", shared = a.team && a.team !== "solo";
+    return [
+      { name:PHASES[0], items:[
+        ["a1","Decide which Google account owns the channel. Use an email you will keep for years, not a shared inbox.","youtube.com, sign in, profile picture (top right)"],
+        ["a2","Turn on 2-Step Verification on that Google account.","myaccount.google.com > Security > 2-Step Verification"],
+        ["a3","Fill in the Google account name and photo so invites and emails look real.","myaccount.google.com > Personal info"]
+      ]},
+      { name:PHASES[1], items:[
+        ["b1","Create the channel as a Brand Channel, not on your personal profile." + (shared ? " You said someone else may touch it, so this step matters most." : " It costs nothing and keeps the door open for a helper later."),"youtube.com/account > Add or manage your channel(s) > Create a channel > type the channel name > Create"],
+        ["b2","Switch to the new channel before you change anything else.","youtube.com/channel_switcher"],
+        ["b3","Claim your handle. Pick one from the handle options in this kit.","studio.youtube.com > Customization > Profile > Handle"],
+        ["b4","Verify the channel with your phone now. It unlocks custom thumbnails, videos over 15 minutes and pinned comments.","youtube.com/verify, then check: studio.youtube.com > Settings > Channel > Feature eligibility"],
+        ["b5",shared ? "Invite your helper with a role. Never share your password." : "Know where roles live, for the day you add a helper.","studio.youtube.com > Settings > Permissions > Invite (Manager or Editor)"]
+      ]},
+      { name:PHASES[2], items:[
+        ["c1","Run the Research Prompt Packet in " + appName() + " with vidIQ connected.","This kit > Research Prompt Packet > Copy > paste into a new chat"],
+        ["c2","Paste the result back into this wizard and download your card.","This wizard > Paste back"],
+        ["c3","Pick the final channel name. Search it on YouTube and Google first, so you do not copy an existing brand.","youtube.com search, google.com search, tmsearch.uspto.gov for trademarks"],
+        ["c4","Add your channel keywords and your country.","studio.youtube.com > Settings > Channel > Basic info > Country of residence and Keywords"]
+      ]},
+      { name:PHASES[3], items:[
+        ["d1","Upload the profile picture (800 x 800).","studio.youtube.com > Customization > Profile > Picture > Upload"],
+        ["d2","Upload the banner (2560 x 1440) and check the crop preview for TV, desktop and mobile.","studio.youtube.com > Customization > Profile > Banner image > Upload"],
+        ["d3","Set the name and paste the About text into Description.","studio.youtube.com > Customization > Profile > Name, then Description"],
+        ["d4","Add your links, free gift first, and your contact email.","studio.youtube.com > Customization > Profile > Links > Add link, then Contact info"],
+        ["d5","Press Publish. Nothing on this page is live until you do.","studio.youtube.com > Customization > Publish (top right)"],
+        ["d6","Create one playlist per pillar, plus Start here.","studio.youtube.com > Create (top right) > New playlist"],
+        ["d7","After your first video: set the trailer, the featured video and one section per playlist.","studio.youtube.com > Customization > Home tab > Video spotlight, then Featured sections > Add section"]
+      ]},
+      { name:PHASES[4], items:[
+        ["e1","Set the audience for the whole channel.","studio.youtube.com > Settings > Channel > Advanced settings > Audience > No, set this channel as not made for kids"],
+        ["e2","Set upload defaults: description template with your free gift link on line one, visibility Unlisted, your tags.","studio.youtube.com > Settings > Upload defaults > Basic info"],
+        ["e3","Set category (Education), video language (" + clean(a.lang) + ") and caption settings.","studio.youtube.com > Settings > Upload defaults > Advanced settings"],
+        ["e4","Set comment moderation to " + (strict ? "Strict" : "Basic") + ", so risky comments are held for your review.","studio.youtube.com > Settings > Community moderation > Defaults > Comments on your videos > " + (strict ? "Strict" : "Basic")],
+        ["e5","Add blocked words and block links in comments.","studio.youtube.com > Settings > Community moderation > Content controls (older layout: Community > Automated filters) > Blocked words, Block links"],
+        ["e6","Know where held comments land, and check it weekly.","studio.youtube.com > Community (older layout: Comments) > Held for review"],
+        ["e7","When a video uses a cloned voice or an AI avatar, switch on the altered content label at upload.","Upload > Details > Altered content > Yes"]
+      ]}
+    ];
+  }
+  var PATH_NOTE = "Click paths checked in October 2026. YouTube renames menus often. If a label is missing, look for the nearest match in the same menu.";
+
+  /* ---------- research: split the pasted text by heading ---------- */
+  var SECTIONS = [["pillars","Pillars"],["playlists","Playlists"],["keywords","Keywords"],["competitors","Competitors"],["outliers","Outliers"],["gaps","Gaps"],["videos","Video List"]];
+  function sectionKey(h){
+    h = h.toLowerCase();
+    if(/video\s*(list|titles?|ideas?)|first\s*20/.test(h)) return "videos";
+    if(/playlist/.test(h)) return "playlists";
+    if(/pillar/.test(h)) return "pillars";
+    if(/competitor/.test(h)) return "competitors";
+    if(/outlier/.test(h)) return "outliers";
+    if(/\bgaps?\b/.test(h)) return "gaps";
+    if(/seed/.test(h)) return "seeds";
+    if(/keyword/.test(h)) return "keywords";
+    return "";
+  }
+  function parseResearch(text){
+    var out = { notes:[] }, cur = "notes";
+    String(text || "").replace(/\r/g, "").split("\n").forEach(function(line){
+      if(/^\s*```/.test(line)) return;
+      var m = line.match(/^\s*#{1,4}\s+(.*)$/) || line.match(/^\s*\*\*([^*]+)\*\*:?\s*$/);
+      if(m){
+        var k = sectionKey(m[1]);
+        if(k){ cur = k; out[cur] = out[cur] || []; return; }
+        if(/^\s*#{1,2}\s/.test(line)) cur = "notes";
+      }
+      (out[cur] = out[cur] || []).push(line);
+    });
+    Object.keys(out).forEach(function(k){ out[k] = out[k].join("\n").trim(); });
+    return out;
+  }
+
+  /* ---------- tiny markdown renderer: headings, tables, lists, paragraphs ---------- */
+  function inline(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "$1"); }
+  function cells(line){ var t = line.trim().replace(/^\|/, "").replace(/\|$/, ""); return t.split("|").map(function(c){ return c.trim(); }); }
+  function mdBlocks(text, rowsPer){
+    var L = String(text || "").split("\n"), out = [], i = 0;
+    rowsPer = rowsPer || 1000;
+    while(i < L.length){
+      var ln = L[i];
+      if(!ln.trim()){ i++; continue; }
+      if(/^\s*\|/.test(ln)){
+        var rows = [];
+        while(i < L.length && /^\s*\|/.test(L[i])){
+          if(!/^[\s|:\-]+$/.test(L[i])) rows.push(cells(L[i]));
+          i++;
+        }
+        var head = rows.shift() || [];
+        var th = "<tr>" + head.map(function(c){ return "<th>" + inline(c) + "</th>"; }).join("") + "</tr>";
+        if(!rows.length) rows = [[]];
+        for(var r = 0; r < rows.length; r += rowsPer){
+          out.push("<div class='tw'><table>" + th + rows.slice(r, r + rowsPer).map(function(row){
+            return "<tr>" + head.map(function(_, ci){ return "<td>" + inline(row[ci] || "") + "</td>"; }).join("") + "</tr>";
+          }).join("") + "</table></div>");
+        }
+        continue;
+      }
+      var hm = ln.match(/^\s*#{1,6}\s+(.*)$/);
+      if(hm){ out.push("<h4>" + inline(hm[1]) + "</h4>"); i++; continue; }
+      if(/^\s*([-*]|\d+[.)])\s+/.test(ln)){
+        var items = [];
+        while(i < L.length && /^\s*([-*]|\d+[.)])\s+/.test(L[i])){ items.push("<li>" + inline(L[i].replace(/^\s*([-*]|\d+[.)])\s+/, "")) + "</li>"); i++; }
+        for(var q = 0; q < items.length; q += 18) out.push("<ul>" + items.slice(q, q + 18).join("") + "</ul>");
+        continue;
+      }
+      var para = [];
+      while(i < L.length && L[i].trim() && !/^\s*(\||#{1,6}\s|([-*]|\d+[.)])\s)/.test(L[i])){ para.push(inline(L[i])); i++; }
+      out.push("<p>" + para.join("<br>") + "</p>");
+    }
+    return out;
+  }
+
+  /* ---------- the card as markdown: fixed headings so a tool can read it ---------- */
+  function buildMarkdown(){
+    var a = S.a, R = parseResearch(S.research), M = [];
+    var none = "_Not pasted yet._";
+    M.push("---");
+    M.push("card: youtube-evergreen-organic-traffic-card");
+    M.push("version: 1");
+    M.push("generated: " + today());
+    M.push("source: " + SOURCE);
+    M.push("ai_app: " + (S.app || ""));
+    M.push("---");
+    M.push("");
+    M.push("# " + CARD_TITLE);
+    M.push("");
+    M.push("## Channel");
+    M.push("");
+    M.push("### Profile");
+    M.push("- Audience: " + clean(a.who));
+    M.push("- Result: " + clean(a.result));
+    M.push("- Topic: " + clean(a.topic));
+    M.push("- Frustration: " + clean(a.pain));
+    M.push("- Proof: " + clean(a.proof));
+    M.push("- Language: " + clean(a.lang));
+    M.push("- Country: " + clean(a.country));
+    M.push("- Channel type: " + (a.face === "brand" ? "brand" : "personal"));
+    M.push("- Publishing pace: " + (a.pace || ""));
+    M.push("- Style: " + (a.style || "") + ", " + (a.color || ""));
+    M.push("");
+    M.push("### Name options"); nameOptions().forEach(function(x){ M.push("- " + x); }); M.push("");
+    M.push("### Handle options"); handleOptions().forEach(function(x){ M.push("- " + x); }); M.push("");
+    M.push("### Tagline"); taglines().forEach(function(x){ M.push("- " + x); }); M.push("");
+    M.push("### About"); M.push(aboutText()); M.push("");
+    M.push("### Links"); linksText().split("\n\n")[0].split("\n").slice(1).forEach(function(x){ M.push("- " + x); }); M.push("");
+    SECTIONS.forEach(function(s){
+      M.push("## " + s[1]); M.push(""); M.push(R[s[0]] || none); M.push("");
+    });
+    M.push("## Checklist"); M.push("");
+    checklist().forEach(function(p, i){
+      M.push("### Phase " + (i+1) + ": " + p.name);
+      p.items.forEach(function(it){ M.push("- [" + (S.checks[it[0]] ? "x" : " ") + "] " + it[1] + " Path: " + it[2]); });
+      M.push("");
+    });
+    M.push("## Notes"); M.push("");
+    if(R.seeds){ M.push("### Seeds"); M.push(R.seeds); M.push(""); }
+    M.push(R.notes || "_None._"); M.push("");
+    M.push("## Next Step"); M.push("");
+    M.push(CTA_LINE + " " + PROGRAM_URL);
+    M.push("");
+    return M.join("\n");
+  }
+
+  /* ---------- the card as blocks: used for the on-screen preview and the PDF ---------- */
+  function cardBlocks(){
+    var R = parseResearch(S.research), B = [];
+    function tx(label, text){ B.push({ h:"<div class='lab'>" + esc(label) + "</div><div class='tx'>" + esc(text) + "</div>" }); }
+    function sh(t){ B.push({ h:"<div class='sh'>" + esc(t) + "</div>", keep:true }); }
+    B.push({ h:"<div class='hero'><div class='k'>BRAND CHANNEL WIZARD</div><div class='t'>" + esc(CARD_TITLE) + "</div><div class='m'>Prepared for " + esc(S.lead ? S.lead.name : "") + " &nbsp;|&nbsp; " + esc(baseName()) + " &nbsp;|&nbsp; " + today() + "</div></div>" });
+    if(IMG.logo || IMG.banner){
+      B.push({ img:true, h:"<div class='imgs'>" + (IMG.logo ? "<img class='l' src='" + IMG.logo + "' alt=''>" : "") + (IMG.banner ? "<div style='flex:1;min-width:0'><img class='bn' src='" + IMG.banner + "' alt=''></div>" : "") + "</div>" });
+    }
+    sh("Channel");
+    tx("Name options", nameOptions().join("\n"));
+    tx("Handle options", handleOptions().join("\n"));
+    tx("Tagline", taglines().join("\n"));
+    tx("About section", aboutText());
+    tx("Links section", linksText());
+    SECTIONS.forEach(function(s){
+      sh(s[1]);
+      var blocks = R[s[0]] ? mdBlocks(R[s[0]], 12) : ["<p style='color:#55635C'>Not pasted yet. Run the Research Prompt Packet and paste the result back.</p>"];
+      blocks.forEach(function(h){ B.push({ h:"<div class='md'>" + h + "</div>" }); });
+    });
+    if(R.notes || R.seeds){
+      sh("Notes");
+      mdBlocks((R.seeds ? "#### Seeds\n" + R.seeds + "\n\n" : "") + (R.notes || ""), 12).forEach(function(h){ B.push({ h:"<div class='md'>" + h + "</div>" }); });
+    }
+    sh("Checklist");
+    checklist().forEach(function(p, i){
+      B.push({ h:"<div class='lab'>Phase " + (i+1) + ": " + esc(p.name) + "</div>" + p.items.map(function(it){
+        return "<div class='ci'><i class='" + (S.checks[it[0]] ? "d" : "") + "'></i><div>" + esc(it[1]) + "<span>" + esc(it[2]) + "</span></div></div>";
+      }).join("") });
+    });
+    B.push({ h:"<p style='color:#55635C;font-size:11px;margin:0'>" + esc(PATH_NOTE) + "</p>" });
+    B.push({ link:PROGRAM_URL, h:"<div class='ctab'>" + esc(CTA_LINE) + "<div>" + esc(PROGRAM_URL) + "</div></div>" });
+    return B;
+  }
+
+  /* ---------- PDF: each block is drawn with html2canvas and placed on A4 pages by jsPDF ---------- */
+  function buildPdf(onStep){
+    var doc = new window.jspdf.jsPDF({ unit:"pt", format:"a4" });
+    var W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+    var M = 36, CW = W - M*2, TOP = 36, BOT = H - 46, y = TOP;
+    var host = $("pdfhost"), blocks = cardBlocks(), i = 0;
+    host.innerHTML = "";
+
+    function place(cv, b, nextKeep){
+      var hPt = cv.height / cv.width * CW, fmt = b.img ? "JPEG" : "PNG";
+      var url = function(c){ return b.img ? c.toDataURL("image/jpeg", 0.9) : c.toDataURL("image/png"); };
+      if(hPt <= BOT - TOP){
+        /* a section heading never stays alone at the bottom of a page */
+        if(y + hPt + (b.keep ? 60 : 0) > BOT){ doc.addPage(); y = TOP; }
+        doc.addImage(url(cv), fmt, M, y, CW, hPt, undefined, "FAST");
+        if(b.link) doc.link(M, y, CW, hPt, { url:b.link });
+        y += hPt;
+        return;
+      }
+      /* taller than a page: cut it into page-high slices */
+      var off = 0;
+      while(off < cv.height){
+        var room = BOT - y;
+        if(room < 120){ doc.addPage(); y = TOP; room = BOT - TOP; }
+        var sh = Math.min(cv.height - off, Math.floor(room * cv.width / CW));
+        var c = document.createElement("canvas"); c.width = cv.width; c.height = sh;
+        var x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, sh);
+        x.drawImage(cv, 0, off, cv.width, sh, 0, 0, cv.width, sh);
+        doc.addImage(url(c), fmt, M, y, CW, sh / cv.width * CW, undefined, "FAST");
+        y += sh / cv.width * CW; off += sh;
+      }
+    }
+    function next(){
+      if(i >= blocks.length){
+        host.innerHTML = "";
+        var n = doc.internal.getNumberOfPages();
+        for(var p = 1; p <= n; p++){
+          doc.setPage(p); doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(85, 99, 92);
+          doc.text(CARD_TITLE, M, H - 24);
+          doc.text("Page " + p + " of " + n, W - M, H - 24, { align:"right" });
+        }
+        return doc;
+      }
+      var b = blocks[i++], el = document.createElement("div");
+      el.className = "b"; el.innerHTML = b.h; host.appendChild(el);
+      if(onStep) onStep(i, blocks.length);
+      return window.html2canvas(el, { scale:2, backgroundColor:"#ffffff", logging:false, useCORS:true }).then(function(cv){
+        host.removeChild(el);
+        place(cv, b);
+        return next();
+      });
+    }
+    return Promise.resolve().then(next);
+  }
+
+  function download(name, blob){
+    var u = URL.createObjectURL(blob), aEl = document.createElement("a");
+    aEl.href = u; aEl.download = name; document.body.appendChild(aEl); aEl.click();
+    setTimeout(function(){ document.body.removeChild(aEl); URL.revokeObjectURL(u); }, 800);
+  }
+
+  /* ---------- lead capture ---------- */
+  function sendLead(payload){
+    if(!WEBHOOK_URL) return;
+    try{
+      fetch(WEBHOOK_URL, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload), keepalive:true
+      }).catch(function(){
+        /* If the browser blocks the JSON request (CORS), resend as a plain form post. */
+        var flat = new URLSearchParams();
+        flat.append("name", payload.name);
+        flat.append("email", payload.email);
+        flat.append("source", payload.source);
+        flat.append("ai_app", payload.ai_app);
+        Object.keys(payload.answers).forEach(function(k){ flat.append(k, String(payload.answers[k])); });
+        return fetch(WEBHOOK_URL, { method:"POST", mode:"no-cors", body:flat, keepalive:true });
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  function copyText(text, btn){
+    function done(){ var t = btn.textContent; btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = t; }, 1400); }
+    function fallback(){
+      var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); done(); }catch(e){}
+      document.body.removeChild(ta);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  }
+
+  /* ---------- screens ---------- */
+  var stage = $("stage");
+  function go(i){ S.i = Math.max(0, Math.min(SCREENS.length - 1, i)); save(); render(); window.scrollTo(0, 0); }
+  function band(tag, n, h, why){
+    return "<section class='band'><span class='steptag'><span class='n'>" + n + "</span> " + esc(tag) + "</span><h2 id='qh' tabindex='-1'>" + esc(h) + "</h2>" + (why ? "<p class='why'>" + esc(why) + "</p>" : "") + "</section>";
+  }
+  function optsHtml(opts, cur){
+    return "<div class='opts'>" + opts.map(function(o){
+      return "<button type='button' class='opt' data-v='" + esc(o[0]) + "' aria-pressed='" + (cur === o[0]) + "'>" + esc(o[1]) + (o[2] ? "<small>" + esc(o[2]) + "</small>" : "") + "</button>";
+    }).join("") + "</div>";
+  }
+  function navHtml(nextLabel, canNext){
+    return "<div class='nav'>" + (S.i > 0 ? "<button type='button' class='btn ghost' id='back'>Back</button>" : "<span></span>") +
+      (nextLabel ? "<button type='button' class='btn' id='next'" + (canNext ? "" : " disabled") + ">" + esc(nextLabel) + "</button>" : "") + "</div>";
+  }
+  function bindNav(onNext){
+    var b = $("back"), n = $("next");
+    if(b) b.addEventListener("click", function(){ go(S.i - 1); });
+    if(n) n.addEventListener("click", function(){ if(!n.disabled){ if(onNext && onNext() === false) return; go(S.i + 1); } });
+  }
+  function onOpts(fn){
+    Array.prototype.forEach.call(stage.querySelectorAll(".opt"), function(b){ b.addEventListener("click", function(){ fn(this.dataset.v); }); });
+  }
+  function progress(){
+    var id = SCREENS[S.i], L = "", R = "", pct;
+    if(S.i < Q_FIRST){ L = "Before we start"; R = "Check " + (S.i + 1) + " of 3"; pct = (S.i) / (EMAIL_I) * 100; }
+    else if(S.i < EMAIL_I){
+      var q = QUESTIONS[S.i - Q_FIRST];
+      L = "Phase " + q.phase + " of 5: " + PHASES[q.phase - 1]; R = "Question " + (S.i - Q_FIRST + 1) + " of " + QUESTIONS.length; pct = S.i / EMAIL_I * 100;
+    } else { L = id === "email" ? "Almost there" : "Your channel kit"; R = id === "email" ? "" : "Step " + (S.i - EMAIL_I) + " of 3"; pct = 100; }
+    $("progL").textContent = L; $("progR").textContent = R; $("progBar").style.width = Math.max(3, pct) + "%";
+  }
+
+  function render(){
+    /* guards: no skipping a gate */
+    if(S.i > 0 && !S.vidiq) S.i = 0;
+    else if(S.i > 1 && !S.app) S.i = 1;
+    else if(S.i > 2 && !S.connected) S.i = 2;
+    else if(S.i > EMAIL_I && !S.lead) S.i = EMAIL_I;
+    var id = SCREENS[S.i];
+    progress();
+    if(id === "g1") return gate1();
+    if(id === "g2") return gate2();
+    if(id === "g3") return gate3();
+    if(id === "email") return emailGate();
+    if(id === "kit") return kit();
+    if(id === "paste") return paste();
+    if(id === "card") return card();
+    return question(QUESTIONS[S.i - Q_FIRST]);
+  }
+
+  function gate1(){
+    stage.innerHTML = band("Check", 1, "Do you have a vidIQ account?", "The free plan works. vidIQ is where the real search numbers come from, so the wizard cannot do its job without it.") +
+      "<div class='card'>" + optsHtml([["yes","Yes, I have one",""],["no","Not yet",""]], S.vidiq ? "yes" : "") +
+      "<div id='blk' hidden class='card hl'><h3>Create your free vidIQ account first</h3><p class='hint'>It takes about two minutes. Come back to this tab when you are in.</p>" +
+      "<a class='btn' href='" + VIDIQ_SIGNUP + "' target='_blank' rel='noopener'>Open vidIQ sign up</a>" +
+      "<button type='button' class='btn ghost' id='gotit'>Done, I have my account now</button></div></div>" + navHtml("", false);
+    onOpts(function(v){ if(v === "yes"){ S.vidiq = true; go(1); } else { S.vidiq = false; save(); $("blk").hidden = false; } });
+    $("gotit").addEventListener("click", function(){ S.vidiq = true; go(1); });
+    bindNav();
+  }
+  function gate2(){
+    stage.innerHTML = band("Check", 2, "Which AI app do you use?", "The wizard writes your research prompt for the exact app you use, so the steps match what you see on screen.") +
+      "<div class='card'>" + optsHtml([["claude","Claude",""],["chatgpt","ChatGPT",""],["none","Neither",""]], S.app) +
+      "<div id='blk' hidden class='card hl'><h3>You need one of the two</h3><p class='hint'>This wizard does not run any AI itself. It prepares a prompt, and you run it in your own Claude or ChatGPT with your own vidIQ account. Open one, sign in, then pick it above.</p>" +
+      "<div class='nav'><a class='btn ghost' href='https://claude.ai/' target='_blank' rel='noopener'>Open Claude</a><a class='btn ghost' href='https://chatgpt.com/' target='_blank' rel='noopener'>Open ChatGPT</a></div></div></div>" + navHtml("", false);
+    onOpts(function(v){
+      if(v === "none"){ S.app = ""; save(); $("blk").hidden = false; return; }
+      if(S.app !== v) S.connected = false;
+      S.app = v; go(2);
+    });
+    bindNav();
+  }
+  function gate3(){
+    var gpt = S.app === "chatgpt";
+    var steps = gpt ? [
+      "Open ChatGPT. Click your name, then <b>Settings</b>, then <b>Apps</b> (it was called Connectors before).",
+      "Search for <b>vidIQ</b> and click <b>Connect</b>. If it is not listed, switch on Developer mode under Apps, Advanced settings, choose <b>Create</b> and paste this address: <code>" + VIDIQ_MCP_URL + "</code>",
+      "Sign in to vidIQ and approve. Then start a new chat, click the plus button and switch <b>vidIQ</b> on."
+    ] : [
+      "Open Claude. Go to <b>Customize</b> (or Settings), then <b>Connectors</b>.",
+      "Find <b>vidIQ</b> in the directory and click <b>Connect</b>. If it is not listed, choose <b>Add custom connector</b>, name it vidIQ and paste this address: <code>" + VIDIQ_MCP_URL + "</code>",
+      "Sign in to vidIQ and approve. Then start a new chat, click the plus button, open <b>Connectors</b> and switch <b>vidIQ</b> on."
+    ];
+    var test = "Use vidIQ to look up the keyword \"how to start a youtube channel\" and tell me its monthly search volume.";
+    stage.innerHTML = band("Check", 3, "Have you connected vidIQ inside " + appName() + "?", "This is what lets " + appName() + " pull live YouTube numbers for you. Without it you would only get guesses.") +
+      "<div class='card'>" + optsHtml([["yes","Yes, it is connected",""],["no","No, show me how",""]], S.connected ? "yes" : "") +
+      "<div id='blk' hidden class='card hl'><h3>Connect vidIQ to " + appName() + " in 3 steps</h3><ol class='steps'>" + steps.map(function(s){ return "<li><span>" + s + "</span></li>"; }).join("") + "</ol>" +
+      "<p class='hint'>Menus move. If yours looks different, vidIQ keeps the current steps here: <a href='" + VIDIQ_MCP_GUIDE + "' target='_blank' rel='noopener'>vidiq.com/mcp</a></p>" +
+      "<div class='blockhead'><p class='flabel'>Test it with this prompt</p><button type='button' class='btn small ghost' id='cptest'>Copy</button></div><pre class='out'>" + esc(test) + "</pre>" +
+      "<p class='hint'>If you get a real number back, you are connected.</p>" +
+      "<button type='button' class='btn' id='gotit'>It works, continue</button></div></div>" + navHtml("", false);
+    onOpts(function(v){ if(v === "yes"){ S.connected = true; go(3); } else { S.connected = false; save(); $("blk").hidden = false; } });
+    $("gotit").addEventListener("click", function(){ S.connected = true; go(3); });
+    $("cptest").addEventListener("click", function(){ copyText(test, this); });
+    bindNav();
+  }
+
+  function question(q){
+    var a = S.a, body = "", n = S.i - Q_FIRST + 1;
+    function inp(key, label, ph, type){ return "<div class='field'><label class='flabel' for='f_" + key + "'>" + esc(label) + "</label><input id='f_" + key + "' type='" + (type || "text") + "' maxlength='160' placeholder='" + esc(ph || "") + "' value='" + esc(a[key] || "") + "' autocomplete='off'></div>"; }
+    if(q.type === "text") body = inp(q.key, q.label, q.ph);
+    else if(q.type === "area") body = "<div class='field'><label class='flabel' for='f_" + q.key + "'>" + esc(q.label) + "</label><textarea id='f_" + q.key + "' maxlength='400' placeholder='" + esc(q.ph) + "'>" + esc(a[q.key] || "") + "</textarea></div>";
+    else if(q.type === "choice") body = optsHtml(q.opts, a[q.key]);
+    else if(q.type === "face") body = optsHtml(q.opts, a.face) + "<div id='more'" + (a.face ? "" : " hidden") + ">" + inp("name", a.face === "brand" ? "The brand name" : "Your name, as viewers should see it", a.face === "brand" ? "Studio Growth Lab" : "Anna Kovacs") + "</div>";
+    else if(q.type === "market") body = "<div class='two'>" + inp("lang", "Language of your videos", "English") + inp("country", "Main country of your viewers", "United States") + "</div>";
+    else if(q.type === "links") body = inp("gift", "Your free gift or opt-in page", "https://", "url") + inp("course", "Your course page", "https://", "url") + inp("site", "Your website", "https://", "url");
+    else if(q.type === "look") body = optsHtml(q.opts, a.style) + "<div class='field'><label class='flabel' for='f_color'>Your main brand color</label><div style='display:flex;gap:10px;align-items:center'><input id='f_color' type='color' value='" + esc(a.color || "#17C05B") + "'><span class='hint'>No brand color yet? Keep this one and change it later.</span></div></div>";
+
+    var auto = q.type === "choice";
+    stage.innerHTML = band("Question", n, q.title, q.why) + "<div class='card'>" + body + "<p class='formerr' id='err' role='alert' hidden></p></div>" + navHtml(auto ? "" : "Next", true);
+
+    function collect(){
+      Array.prototype.forEach.call(stage.querySelectorAll("input,textarea"), function(el){ a[el.id.replace("f_", "")] = el.value; });
+      save();
+    }
+    function valid(){
+      var err = "";
+      if(q.type === "text" || q.type === "area"){ if(REQUIRED[q.key] && !clean(a[q.key])) err = "Type a short answer to continue."; }
+      if(q.type === "face"){ if(!a.face) err = "Pick one of the two."; else if(!clean(a.name)) err = "Type the name to continue."; }
+      if(q.type === "market"){ if(!clean(a.lang) || !clean(a.country)) err = "Fill in both to continue."; }
+      if(q.type === "look" && !a.style) err = "Pick a style to continue.";
+      $("err").textContent = err; $("err").hidden = !err;
+      return !err;
+    }
+    Array.prototype.forEach.call(stage.querySelectorAll("input,textarea"), function(el){
+      el.addEventListener("input", collect);
+      if(el.tagName === "INPUT") el.addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); collect(); if(valid()) go(S.i + 1); } });
+    });
+    onOpts(function(v){
+      if(q.type === "choice"){ a[q.key] = v; go(S.i + 1); return; }
+      collect();
+      if(q.type === "face") a.face = v; else a.style = v;
+      save(); question(q);
+      var f = $("f_name"); if(f) f.focus();
+    });
+    bindNav(function(){ collect(); return valid(); });
+    var first = stage.querySelector("input[type=text],input[type=url],textarea");
+    if(first && window.matchMedia && window.matchMedia("(min-width:700px)").matches) first.focus();
+  }
+
+  function emailGate(){
+    var l = S.lead || { name:"", email:"" };
+    stage.innerHTML = band("Last step", "5", "Your channel kit is ready", "Tell me where to send the follow-up, and you will see everything on the next screen: ready texts, your research prompt, image prompts and the checklist.") +
+      "<form class='card hl' id='leadForm' novalidate><div class='two'>" +
+      "<div class='field'><label class='flabel' for='leadName'>First name</label><input id='leadName' name='name' type='text' autocomplete='given-name' maxlength='60' required value='" + esc(l.name) + "'></div>" +
+      "<div class='field'><label class='flabel' for='leadEmail'>Email</label><input id='leadEmail' name='email' type='email' autocomplete='email' maxlength='120' inputmode='email' required value='" + esc(l.email) + "'></div></div>" +
+      "<p class='formerr' id='formErr' role='alert' hidden></p>" +
+      "<button class='btn' type='submit'>Show my channel kit</button></form>" + navHtml("", false);
+    $("leadForm").addEventListener("submit", function(ev){
+      ev.preventDefault();
+      var name = $("leadName").value.trim(), email = $("leadEmail").value.trim(), err = $("formErr"), problem = "";
+      if(!name) problem = "Enter your first name.";
+      else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) problem = "Enter a valid email address, like name@example.com.";
+      if(problem){ err.textContent = problem; err.hidden = false; (name ? $("leadEmail") : $("leadName")).focus(); return; }
+      var fresh = !S.lead || S.lead.email !== email;
+      S.lead = { name:name, email:email };
+      if(fresh) sendLead({ name:name, email:email, source:SOURCE, ai_app:S.app, answers:Object.assign({}, S.a) });
+      go(KIT_I);
+    });
+    bindNav();
+  }
+
+  function tabs(){
+    var names = ["1. Your kit","2. Paste back","3. Your card"];
+    return "<nav class='tabs' aria-label='Kit steps'>" + names.map(function(n, k){
+      return "<button type='button' class='tab' data-go='" + (KIT_I + k) + "' aria-current='" + (S.i === KIT_I + k) + "'>" + n + "</button>";
+    }).join("") + "</nav>";
+  }
+  function bindTabs(){
+    Array.prototype.forEach.call(stage.querySelectorAll(".tab"), function(b){ b.addEventListener("click", function(){ go(parseInt(this.dataset.go, 10)); }); });
+  }
+  var COPY = {};
+  function block(id, label, text, mono, hint){
+    COPY[id] = text;
+    return "<div class='card'><div class='blockhead'><h3>" + esc(label) + "</h3><button type='button' class='btn small' data-copy='" + id + "'>Copy</button></div>" +
+      (hint ? "<p class='hint'>" + hint + "</p>" : "") + "<pre class='out" + (mono ? " mono" : "") + "'>" + esc(text) + "</pre></div>";
+  }
+  function bindCopy(){
+    Array.prototype.forEach.call(stage.querySelectorAll("[data-copy]"), function(b){ b.addEventListener("click", function(){ copyText(COPY[this.dataset.copy], this); }); });
+  }
+
+  function kit(){
+    COPY = {};
+    var cl = checklist(), h = tabs();
+    h += "<div class='card hl'><h3>Here is your kit, " + esc(S.lead.name) + "</h3><p class='hint'>Four parts. Copy what you need. The one that matters most is part B: run it in " + appName() + ", then come back and paste the result.</p></div>";
+    h += "<p class='sechead'>A. Ready text</p>";
+    h += block("names", "Channel name options", nameOptions().join("\n"), false, "Pick one. Short and easy to say beats clever.");
+    h += block("handles", "Handle options", handleOptions().join("\n"), false, "YouTube tells you if a handle is taken when you type it in.");
+    h += block("tag", "Tagline", taglines().join("\n"));
+    h += block("about", "About section", aboutText(), false, "The first 150 characters show in search, so the topic and the audience come first.");
+    h += block("links", "Links section", linksText());
+    h += "<p class='sechead'>B. Research Prompt Packet, for " + appName() + "</p>";
+    h += block("research", "One prompt, seven steps", researchPrompt(), true, "Open a new chat in " + appName() + ", make sure vidIQ is switched on, paste this and send. It takes a few minutes.");
+    h += "<p class='sechead'>C. Image prompts, for any image AI</p>";
+    h += block("logo", "Logo or profile picture, 800 x 800", logoPrompt(), true);
+    h += block("banner", "Banner, 2560 x 1440, safe area 1546 x 423", bannerPrompt(), true);
+    h += "<p class='sechead'>D. Phase checklist</p><div class='card'>";
+    cl.forEach(function(p, i){
+      h += "<div class='phase'><h4>Phase " + (i+1) + ": " + esc(p.name) + "</h4>" + p.items.map(function(it){
+        return "<label class='chk'><input type='checkbox' data-chk='" + it[0] + "'" + (S.checks[it[0]] ? " checked" : "") + "><span>" + esc(it[1]) + "<span class='p'><span class='path'>" + esc(it[2]) + "</span></span></span></label>";
+      }).join("") + "</div>";
+    });
+    h += "<p class='hint'>" + esc(PATH_NOTE) + "</p>";
+    h += "<div class='nav'><span></span><button type='button' class='btn small ghost' data-copy='check'>Copy the checklist</button></div></div>";
+    COPY.check = cl.map(function(p, i){ return "Phase " + (i+1) + ": " + p.name + "\n" + p.items.map(function(it){ return "[ ] " + it[1] + "\n    " + it[2]; }).join("\n"); }).join("\n\n");
+    h += "<div class='nav'><button type='button' class='btn ghost' id='edit'>Change my answers</button><button type='button' class='btn' id='next'>Next: paste your research back</button></div>";
+    stage.innerHTML = h;
+    bindTabs(); bindCopy();
+    Array.prototype.forEach.call(stage.querySelectorAll("[data-chk]"), function(c){ c.addEventListener("change", function(){ S.checks[this.dataset.chk] = this.checked; save(); }); });
+    $("edit").addEventListener("click", function(){ go(Q_FIRST); });
+    $("next").addEventListener("click", function(){ go(S.i + 1); });
+  }
+
+  function foundHtml(){
+    var R = parseResearch(S.research);
+    return SECTIONS.map(function(s){ return "<span class='chip" + (R[s[0]] ? " ok" : "") + "'>" + s[1] + (R[s[0]] ? ": found" : ": missing") + "</span>"; }).join("");
+  }
+  function readImage(file, kind, cb){
+    if(!file || !/^image\//.test(file.type)) return;
+    var fr = new FileReader();
+    fr.onload = function(){ var im = new Image(); im.onload = function(){ IMG[kind] = fr.result; IMG[kind + "Size"] = im.naturalWidth + " x " + im.naturalHeight; cb(); }; im.src = fr.result; };
+    fr.readAsDataURL(file);
+  }
+  function previews(){
+    var l = $("logoPrev"), b = $("bannerPrev");
+    l.innerHTML = IMG.logo ? "<div class='logos'>" + [[120,"Channel page"],[48,"Under videos"],[24,"Comments"]].map(function(s){
+      return "<figure><img src='" + IMG.logo + "' width='" + s[0] + "' height='" + s[0] + "' alt='Logo preview'>" + s[1] + "</figure>"; }).join("") + "</div>" +
+      "<p class='hint'>Your file is " + IMG.logoSize + (IMG.logoSize === "800 x 800" ? ". Right size." : ". YouTube wants 800 x 800, square.") + " Can you still read it in the smallest circle?</p>" : "";
+    b.innerHTML = IMG.banner ? "<div class='banner'><img src='" + IMG.banner + "' alt='Banner preview'><div class='desk' id='deskO'></div><div class='safe' id='safeO'><span>Safe area 1546 x 423</span></div></div>" +
+      "<label class='chk'><input type='checkbox' id='ovl' checked><span>Show the safe area<span class='p'>Green box: what phones show. Dashed strip: what desktop shows. Everything darkened only appears on TVs.</span></span></label>" +
+      "<p class='hint'>Your file is " + IMG.bannerSize + (IMG.bannerSize === "2560 x 1440" ? ". Right size." : ". YouTube wants 2560 x 1440.") + " All text and the logo must sit inside the green box.</p>" : "";
+    var o = $("ovl"); if(o) o.addEventListener("change", function(){ $("safeO").hidden = !this.checked; $("deskO").hidden = !this.checked; });
+  }
+  function paste(){
+    stage.innerHTML = tabs() +
+      "<div class='card'><h3>Paste your research from " + appName() + "</h3><p class='hint'>Copy the whole answer from " + appName() + " and paste it here, tables and all. It stays in this browser.</p>" +
+      "<textarea class='tall' id='research' placeholder='## Seeds&#10;| # | Seed | Why this seed |&#10;...'>" + esc(S.research) + "</textarea>" +
+      "<div class='found' id='found'>" + foundHtml() + "</div>" +
+      "<p class='hint'>A section shows as missing when its heading is not in the text. You can still download the card and add it later.</p></div>" +
+      "<div class='card'><h3>Add your logo and banner (optional)</h3><p class='hint'>Made them with the image prompts? Check them here before you upload to YouTube. The files are read by your browser only. They are never stored and never sent anywhere.</p>" +
+      "<div class='drop'><label class='flabel' for='logoFile'>Logo or profile picture</label><input type='file' id='logoFile' accept='image/*'><div id='logoPrev'></div></div>" +
+      "<div class='drop'><label class='flabel' for='bannerFile'>Banner</label><input type='file' id='bannerFile' accept='image/*'><div id='bannerPrev'></div></div></div>" +
+      "<div class='nav'><button type='button' class='btn ghost' id='back'>Back to the kit</button><button type='button' class='btn' id='next'>Next: build my card</button></div>";
+    bindTabs(); previews();
+    $("research").addEventListener("input", function(){ S.research = this.value; save(); $("found").innerHTML = foundHtml(); });
+    $("logoFile").addEventListener("change", function(){ readImage(this.files[0], "logo", previews); });
+    $("bannerFile").addEventListener("change", function(){ readImage(this.files[0], "banner", previews); });
+    bindNav();
+  }
+
+  function card(){
+    var has = !!S.research.trim();
+    stage.innerHTML = tabs() +
+      "<div class='card hl'><h3 id='qh' tabindex='-1'>Your " + CARD_TITLE + "</h3>" +
+      "<p class='hint'>" + (has ? "Your texts, your research and your checklist in one place." : "You have not pasted any research yet, so those sections will be empty. You can still download the card now and come back later.") + "</p>" +
+      "<div class='nav'><button type='button' class='btn' id='pdfBtn'>Download the PDF</button><button type='button' class='btn ghost' id='mdBtn'>Download the .md file</button></div>" +
+      "<p class='hint' id='dlMsg' role='status'>The .md file has fixed headings, so other tools can read it later.</p></div>" +
+      "<div class='card'><p class='cta'>" + esc(CTA_LINE) + " <a id='programLink' href='" + esc(PROGRAM_URL) + "' target='_blank' rel='noopener'>See the program</a></p></div>" +
+      "<div class='card'><h3>Preview</h3><div class='md' id='preview'></div></div>" +
+      "<div class='nav'><button type='button' class='btn ghost' id='back'>Back</button><button type='button' class='btn ghost' id='restart'>Start over</button></div>";
+    bindTabs(); bindNav();
+    var R = parseResearch(S.research), prev = "<h4>Channel</h4><p><b>" + esc(nameOptions()[0]) + "</b> " + esc(handleOptions()[0] || "") + "<br>" + esc(taglines()[0]) + "</p>";
+    SECTIONS.forEach(function(s){ prev += "<h4>" + s[1] + "</h4>" + (R[s[0]] ? mdBlocks(R[s[0]]).join("") : "<p class='hint'>Not pasted yet.</p>"); });
+    $("preview").innerHTML = prev;
+    $("mdBtn").addEventListener("click", function(){
+      download(FILE_BASE + ".md", new Blob([buildMarkdown()], { type:"text/markdown;charset=utf-8" }));
+      $("dlMsg").textContent = "Check your downloads for the .md file.";
+    });
+    $("pdfBtn").addEventListener("click", function(){
+      var btn = this, msg = $("dlMsg");
+      if(!window.jspdf || !window.jspdf.jsPDF || !window.html2canvas){ msg.textContent = "The PDF tool did not load. Check your connection, reload the page and try again."; return; }
+      btn.disabled = true; msg.textContent = "Building your PDF.";
+      buildPdf(function(i, n){ msg.textContent = "Building your PDF, part " + i + " of " + n + "."; }).then(function(doc){
+        doc.save(FILE_BASE + ".pdf");
+        msg.textContent = "Check your downloads for the PDF.";
+      }).catch(function(){
+        msg.textContent = "The PDF could not be created. Reload the page and try again. The .md file still works.";
+      }).then(function(){ btn.disabled = false; });
+    });
+    $("restart").addEventListener("click", function(){
+      if(!window.confirm("Clear all your answers and start again?")) return;
+      try{ localStorage.removeItem("bcw_state"); }catch(e){}
+      location.reload();
+    });
+  }
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
