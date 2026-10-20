@@ -1,12 +1,12 @@
 # Brand Channel Wizard: STATUS
 
-Last updated: 2026-10-10
+Last updated: 2026-10-20
 
 ## End goal
 A standalone lead magnet for course creators that turns the 5 phase VoxFlow channel setup into a self-serve wizard and feeds the 6-pillar cohort program.
 
 ## Now
-v1.2.0 is live on GitHub Pages. One file, `index.html`. It includes the reliability pass (status line, PDF and download fallbacks) and the detailed event log (README, "Finding out what happened"). A brand design duplicate lives in `YogiZoli/yt-band-channel-wizard-brand-design`; keep the script blocks of the two in sync.
+v1.2.1 is live on GitHub Pages (2026-10-20: jsPDF 4.2.1 and html2canvas served from `vendor/` first, CDNs as fallback). One file, `index.html`. It includes the reliability pass (status line, PDF and download fallbacks) and the detailed event log (README, "Finding out what happened"). A brand design duplicate lives in `YogiZoli/yt-band-channel-wizard-brand-design`; keep the script blocks of the two in sync.
 
 ## Next
 - Set `WEBHOOK_URL` (GHL inbound webhook) and `PROGRAM_URL` (still the placeholder).
