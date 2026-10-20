@@ -202,8 +202,8 @@
 </div>
 <div class="pdfhost" id="pdfhost" aria-hidden="true"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/html2canvas.min.js"></script>
 <script>
 /* ===== SETTINGS: the two things to edit ===== */
 var WEBHOOK_URL = "";   // GHL inbound webhook. Empty = no POST, the kit is still delivered.
@@ -292,7 +292,7 @@ var LOG_URL = "";       // optional: every error also posts the diagnostic repor
   var S = { i:0, vidiq:false, app:"", connected:false, lead:null, research:"", checks:{},
             a:{ lang:"English", country:"United States", color:"#17C05B" } };
   var IMG = { logo:null, banner:null };   /* memory only: never stored, never sent */
-  var APP_VERSION = "1.2.0";
+  var APP_VERSION = "1.2.1";
   var STORE_KEY = "bcw_state";
   var JOB = { pdf:false };   /* what is running right now */
   var LAST = {};             /* the last file made of each kind, so it can be opened again */
@@ -850,9 +850,9 @@ var LOG_URL = "";       // optional: every error also posts the diagnostic repor
   /* The two PDF tools come from cdnjs. If one did not arrive, try again, then try a second CDN. */
   var LIBS = {
     jspdf:{ test:function(){ return !!(window.jspdf && window.jspdf.jsPDF); },
-      urls:["https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"] },
+      urls:["vendor/jspdf.umd.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js", "https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"] },
     h2c:{ test:function(){ return !!window.html2canvas; },
-      urls:["https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"] }
+      urls:["vendor/html2canvas.min.js", "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"] }
   };
   function loadScript(url){
     return withTimeout(new Promise(function(res, rej){

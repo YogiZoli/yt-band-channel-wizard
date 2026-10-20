@@ -17,7 +17,7 @@ Live: https://yogizoli.github.io/yt-band-channel-wizard/
 ## Stack
 
 - One static file: `index.html` (HTML, CSS, vanilla JavaScript). No build step, no framework, no backend.
-- PDF: jsPDF 2.5.1 and html2canvas 1.4.1 from cdnjs, generated in the browser.
+- PDF: jsPDF 4.2.1 and html2canvas 1.4.1, generated in the browser. Both ship in `vendor/`.
 - Lead capture: optional POST to a webhook (GoHighLevel inbound webhook).
 - State: `localStorage` in the visitor's browser. Uploaded images stay in memory only.
 
@@ -44,7 +44,7 @@ The rule: nothing fails silently, no raw error reaches the visitor, and the page
 - **Status line** under the progress bar: what is running, whether to wait, and when the page can be closed.
 - **Saved progress**: answers are saved in the browser as the visitor types. If the browser refuses to save (private mode, full storage), the page says so and asks to keep the tab open. Research that is too large to save is kept on the page and the visitor is told.
 - **Saved state is checked on load**: an old, half written or broken state is repaired. If a required answer is missing, the visitor is taken to that question instead of a broken kit.
-- **PDF**: tries the designed PDF, then a lighter one, then a plain text PDF. The two PDF tools load from cdnjs, with jsDelivr as the second try. A part that hangs is cut off after 25 seconds.
+- **PDF**: tries the designed PDF, then a lighter one, then a plain text PDF. The two PDF tools load from the local `vendor/` copy, then cdnjs, then jsDelivr. A part that hangs is cut off after 25 seconds.
 - **Downloads**: after each file the page shows an "open in a new tab" link, because some browsers ignore a started download. The .md text can also be copied.
 - **Copy buttons**: if the browser blocks copying, the text is selected and the visitor is told how to copy it by hand.
 - **Images**: wrong type, over 30 MB or an unreadable format gives a clear message. Large images are scaled down in memory so the PDF step does not run out of memory.
